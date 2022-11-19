@@ -73,19 +73,3 @@ CREATE TABLE IF EXISTS comment.comment (
 );
 
 
---DROP TABLE IF EXISTS comments.source_iterables;
-
-CREATE TABLE IF EXISTS comments.source_iterables (
-	comment_id text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT NOW(),
-	awarders text NULL,
-	user_reports text NULL,
-	all_awardings text NULL,
-	author_flair_richtext text NULL,
-	gildings text NULL,
-	treatment_tags text NULL,
-	mod_reports text NULL,
-	children text NULL,
-	media_metadata text NULL
-);

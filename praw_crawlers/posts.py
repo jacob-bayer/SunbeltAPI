@@ -20,6 +20,13 @@ reddit = praw.Reddit(
     check_for_async = False
 )
 
+
+# TO DO NEXT
+# DEAL WITH INCREMENTING IDS
+
+
+
+
 # =============================================================================
 # engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
 # with engine.connect() as con:
@@ -40,7 +47,7 @@ for schema, mode in modes.items():
             SELECT MAX({idname}) FROM {schema}.{schema};""", 
                                environ['MAIN_MEDIA_DATABASE'])
 
-total_posts_to_get = 10000
+total_posts_to_get = 30
 batch_size = 3
 comments = []
 posts = []
@@ -74,11 +81,12 @@ while len(posts) < total_posts_to_get:
         posts.append(post_vars)
         
         post_id = post_id + 1
-        
-    params = {'after': post.name}
-    print(len(posts))
-
+    
+    
     batch_reading_time = datetime.now() - start_time
+    params = {'after': post.name}
+    print(len(posts), 'posts')
+    print(len(comments), 'comments')
     
     posts_df = pd.DataFrame(posts)
     comments_df = pd.DataFrame(comments)
