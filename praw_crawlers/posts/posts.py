@@ -4,7 +4,7 @@ import praw
 from os import environ
 from dotenv import load_dotenv
 import pandas as pd
-from mydatabasemodule.praw_output_cleaner import clean_data_frame
+from mydatabasemodule.praw_output_cleaner import clean_and_normalize
 from sqlalchemy import create_engine
 from datetime import datetime
 
@@ -25,7 +25,13 @@ api_query = reddit.subreddit("all")\
                        time_filter = 'all')
                   
 #posts = [vars(x) for x in api_query]
-posts_df = pd.DataFrame(vars(x) for x in api_query)
+comments = []
+posts = [x for x in api_query]
+for post in posts:
+    comments = comments + [vars(x) for x in post.comments]
+    posts.append(vars(post))
+
+posts_df = pd.DataFrame(posts)
 
 """
 future idea:
@@ -49,20 +55,12 @@ with engine.connect() as con:
 posts_df = posts_df.reset_index()
 posts_df = posts_df.rename(columns={'index':'post_id'})
 
-frames = clean_data_frame(posts_df)
+frames, objects = clean_and_normalize(posts_df, schema_name)
 
-# The author and subreddit are included as objects but they get thrown away
-table_dest = {
-    'cleaned_dataframe' : 'posts',
-    'iterables'         : 'source_iterables'
-    }
-
-
-for table, dest in table_dest.items():
-    print("Writing",dest)
-    df = frames[table]
+for table, df in frames.items():
+    print("Writing",table)
     df['modified_at'] = datetime.now()
-    df.to_sql(name = dest,
+    df.to_sql(name = table,
                 schema = schema_name,
                 con = environ['MAIN_MEDIA_DATABASE'], 
                 if_exists='append', # DO NOT CHANGE THIS

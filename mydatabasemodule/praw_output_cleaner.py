@@ -1,12 +1,38 @@
 # -*- coding: utf-8 -*-
 
+import pandas as pd
 
-def clean_data_frame(df):
+def json_normalize_with_id(df):
+    df = pd.json_normalize(df).set_index(df.index).dropna(how='all')
+    df.columns = [x.replace('.','_') for x in df.columns]
+    return df
+
+def pd_json_normalize_list_of_dicts(df, index_name = None):
+    index_name = index_name or df.index.name
+    if not index_name:
+        ermsg = "Must provide index name or name the index in the dataframe"
+        raise ValueError(ermsg)
+        
+    all_data = pd.DataFrame()
+    for id_col, data in df.items():
+        data = pd.json_normalize(data)
+        data.insert(0,'post_id', id_col)
+                            
+        all_data = pd.concat([
+            all_data,
+            data], 
+            axis = 0,
+            ignore_index = True)
+    all_data.columns = [x.replace('.','_') for x in all_data.columns]
+    return all_data.set_index(index_name)
+
+
+def clean_and_sort(df):
     """
     Removes columns whose values are python objects and returns a 
     dictionary of dataframes
     """
-    
+    print('Cleaning and sorting')
     id_col = df.columns[0]
     if 'id' not in id_col:
         id_col = df.index.name or ''
@@ -66,7 +92,79 @@ def clean_data_frame(df):
     # Return dictionary of dataframes
     return {'cleaned_dataframe' : df[keep_cols].set_index(id_col),
             'iterables'         : df[iter_cols].set_index(id_col),
-            'obejcts'           : df[class_cols].set_index(id_col)}
+            'objects'           : df[class_cols].set_index(id_col)}
 
 
+def normalize_iterables(df):
+    """
+    Does specific things depending on which column iteration needs
+    to be performed
+    """
+    
+    final_dict = {}
+    for table, data in df.iteritems():
+        if table == 'gildings':
+            print('Iterating', table)
+            gildings = json_normalize_with_id(data)
+            gildings = gildings.melt(value_vars = gildings.columns, 
+                                     var_name = 'reddit_gid', 
+                                     #value_name = 'not sure',
+                                     ignore_index = False)\
+                                     .dropna(subset = ['value'])
+            final_dict['gildings'] = gildings
+                        
+        if table == 'all_awardings':
+            print('Iterating', table)
+            all_awardings = pd_json_normalize_list_of_dicts(data)
+            # I don't care about the iterables they are stupid for this one
+            all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
+            keepcols = [x for x in all_awardings.columns 
+                       if 'tiers_by_required_awardings' not in x]
+            all_awardings = all_awardings[keepcols]
+            final_dict['all_awardings'] = all_awardings
+            
+        if table == 'previews':
+            print('Iterating', table)
+            previews = json_normalize_with_id(data)
+            previews = clean_and_sort(previews)
+            images = pd_json_normalize_list_of_dicts(previews['iterables']['images'])
+            previews = previews['cleaned_dataframe']
+            final_dict['resolutions'] = pd_json_normalize_list_of_dicts(images['resolutions'])
+            images.drop(columns='resolutions', inplace = True)
+            final_dict['previews'] = pd.concat([previews,images], axis=1)
+            
+        if table == 'media':
+            print('Iterating', table)
+            final_dict['media'] = json_normalize_with_id(data)
+        if table == 'media_embed':
+            print('Iterating', table)
+            final_dict['media_embed'] = json_normalize_with_id(data)
+        if table == 'secure_media': 
+            print('Iterating', table)
+            final_dict['secure_media'] = json_normalize_with_id(data)
+        
+    return final_dict
+        # TODO:
+        # unknown format
+        # secure_media_embed
+        # mod_reports
+        # comments_by_id
+        # user_reports
+        # author_flair_richtext
 
+        # dont care about data
+        # treatment_tags
+        # link_flair_richtext
+
+        # not sure if i want it
+        # content_categories
+
+            
+def clean_and_normalize(df, main_table_name):
+    ready_to_write_dict = {}
+    cleaned_dict = clean_and_sort(df)
+    normalized_iterables_dict = normalize_iterables(cleaned_dict['iterables'])
+    ready_to_write_dict.update(normalized_iterables_dict)
+    ready_to_write_dict.update({main_table_name : 
+                                cleaned_dict['cleaned_dataframe']})
+    return ready_to_write_dict, cleaned_dict['objects']
