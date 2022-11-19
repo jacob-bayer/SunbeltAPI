@@ -3,9 +3,9 @@
 import pandas as pd
 
 def json_normalize_with_id(df):
-    df = pd.json_normalize(df).set_index(df.index).dropna(how='all')
-    df.columns = [x.replace('.','_') for x in df.columns]
-    return df
+    newdf = pd.json_normalize(df).set_index(df.index).dropna(how='all')
+    newdf.columns = [x.replace('.','_') for x in newdf.columns]
+    return newdf
 
 def pd_json_normalize_list_of_dicts(df, index_name = None):
     index_name = index_name or df.index.name
@@ -16,7 +16,7 @@ def pd_json_normalize_list_of_dicts(df, index_name = None):
     all_data = pd.DataFrame()
     for id_col, data in df.items():
         data = pd.json_normalize(data)
-        data.insert(0,'post_id', id_col)
+        data.insert(0,index_name, id_col)
                             
         all_data = pd.concat([
             all_data,
@@ -33,13 +33,13 @@ def clean_and_sort(df):
     dictionary of dataframes
     """
     print('Cleaning and sorting')
-    id_col = df.columns[0]
-    if 'id' not in id_col:
-        id_col = df.index.name or ''
-        if 'id' in id_col:
-            df = df.reset_index()
-        else:
-            raise Exception('Bad ID Col')
+    id_col = df.index.name or ''
+    if 'id' in id_col:
+        df = df.reset_index()
+    else:
+        raise Exception("""
+        Bad ID Col. Primary ID (but not neccesarily key) must be index.
+        """)
     
     # Remove leading underscores from column names and replace
     # periods with underscores
@@ -115,6 +115,7 @@ def normalize_iterables(df):
                         
         if table == 'all_awardings':
             print('Iterating', table)
+            data = data[data.map(lambda x: len(x) > 0)]
             all_awardings = pd_json_normalize_list_of_dicts(data)
             # I don't care about the iterables they are stupid for this one
             all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
@@ -164,7 +165,9 @@ def clean_and_normalize(df, main_table_name):
     ready_to_write_dict = {}
     cleaned_dict = clean_and_sort(df)
     normalized_iterables_dict = normalize_iterables(cleaned_dict['iterables'])
-    ready_to_write_dict.update(normalized_iterables_dict)
+    # main one must come first
     ready_to_write_dict.update({main_table_name : 
                                 cleaned_dict['cleaned_dataframe']})
+    ready_to_write_dict.update(normalized_iterables_dict)
+
     return ready_to_write_dict, cleaned_dict['objects']
