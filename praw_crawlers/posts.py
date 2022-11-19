@@ -21,14 +21,23 @@ reddit = praw.Reddit(
 )
 
 api_query = reddit.subreddit("all")\
-                  .top(limit=10, 
-                       time_filter = 'all')
+                  .top(limit=1, 
+                       time_filter = 'all',
+                       params ={'after':'t3_jptqj9'}
+                       )
                   
-#posts = [vars(x) for x in api_query]
+
+post = next(api_query)
+post.name == 't3_62sjuh'
+
 comments = []
-posts = [x for x in api_query]
-for post in posts:
+posts = []
+crossposts = []
+for post in api_query:
+    # do this right
+    crossposts = crossposts + [vars(x) for x in post.duplicates]
     comments = comments + [vars(x) for x in post.comments]
+
     posts.append(vars(post))
 
 posts_df = pd.DataFrame(posts)
@@ -52,19 +61,27 @@ with engine.connect() as con:
 # which is the identity based on the last known identity from the database
 # which should already have been used to reset the index on the df
 # before it was passed to this function
-posts_df = posts_df.reset_index()
-posts_df = posts_df.rename(columns={'index':'post_id'})
+posts_df = posts_df.reset_index().rename(columns={'index':'post_id'})
 
 frames, objects = clean_and_normalize(posts_df, schema_name)
 
-for table, df in frames.items():
+order_to_write = [
+'posts',
+'media_embed', 
+'secure_media', 
+'gildings', 
+'all_awardings', 
+'media']
+
+for table in order_to_write:
     print("Writing",table)
+    df = frames[table]
     df['modified_at'] = datetime.now()
     df.to_sql(name = table,
                 schema = schema_name,
                 con = environ['MAIN_MEDIA_DATABASE'], 
                 if_exists='append', # DO NOT CHANGE THIS
-                index = False)
+                index = True)
     print("Success \n")
 
 
