@@ -7,9 +7,19 @@ import pandas as pd
 from mydatabasemodule.praw_output_cleaner import clean_and_normalize
 from sqlalchemy import create_engine
 from datetime import datetime
+from dataclasses import dataclass
+from enum import Enum
 
-modes = {'posts' : 'overwrite',
-         'comments' : 'overwrite'}
+WriteMode = Enum('WriteMode', ['overwrite','append'])
+
+@dataclass
+class SchemaConfig:
+    name: str
+    writemode: Enum
+    frames: dict = None
+        
+posts = SchemaConfig(name = 'posts',
+                     writemode = WriteMode.overwrite)
 
 load_dotenv()
 
@@ -21,31 +31,20 @@ reddit = praw.Reddit(
 )
 
 
-# TO DO NEXT
-# DEAL WITH INCREMENTING IDS
-
-
-
-
-# =============================================================================
-# engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
-# with engine.connect() as con:
-# 
-#     for schema, mode in modes.items():
-#         if mode == 'overwrite':
-#             con.execute(f"TRUNCATE TABLE {schema}.{schema} RESTART IDENTITY CASCADE;")
-#         
-#         else:
-#             result = con.execute(f"SELECT max(post_id) FROM {schema_name}.posts")
-#             last_post_id = result.first()[0]
-# =============================================================================
-
 last_ids = {}
+db_url = environ['MAIN_MEDIA_DATABASE']
 for schema, mode in modes.items():
-    idname = schema[:-1] + '_id'
-    last_ids[schema] = pd.read_sql(f"""
-            SELECT MAX({idname}) FROM {schema}.{schema};""", 
-                               environ['MAIN_MEDIA_DATABASE'])
+    if mode == 'overwrite':
+        engine = create_engine(db_url)
+        with open(f'./ddl/{schema}.sql') as file:
+            sql = file.read()
+        with engine.connect() as conn:
+            conn.execute(sql)
+    elif mode == 'append':
+        idname = schema[:-1] + '_id'
+        last_ids[schema] = pd.read_sql(f"""
+                SELECT MAX({idname}) FROM {schema}.{schema};""", 
+                                   db_url)
 
 total_posts_to_get = 30
 batch_size = 3
@@ -88,38 +87,27 @@ while len(posts) < total_posts_to_get:
     print(len(posts), 'posts')
     print(len(comments), 'comments')
     
-    posts_df = pd.DataFrame(posts)
+    posts_df = pd.DataFrame(posts).set_index('post_id')
     comments_df = pd.DataFrame(comments)
-    
-    """
-    future idea:
-        create some kind of data profile for the user based on
-        subreddits they are active in and what they usually say
-    """
-
-    
-    # Reset the index and keep the index column, renaming it to post_id
-    # which is the identity based on the last known identity from the database
-    # which should already have been used to reset the index on the df
-    # before it was passed to this function
-    posts_df = posts_df.reset_index().rename(columns={'index':'post_id'})
-    comments_df = comments_df.reset_index().rename(columns={'index':'comment_id'})
-    
+    comments_df.index.name = 'comment_id'
+        
     
     posts_frames, objects = clean_and_normalize(posts_df, 'posts')
     comments_frames, objects = clean_and_normalize(comments_df, 'comments')
     
+    frames = [posts_frames, 
+              comments_frames]
     
-    
-    for table, df in posts_frames.items():
-        print("Writing",table)
-        df['modified_at'] = datetime.now()
-        df.to_sql(name = table,
-                    schema = 'posts',
-                    con = environ['MAIN_MEDIA_DATABASE'], 
-                    if_exists='append', # DO NOT CHANGE THIS
-                    index = True)
-        print("Success \n")
+    for frame in frames:
+        for table, df in posts_frames.items():
+            print("Writing",table)
+            df['modified_at'] = datetime.now()
+            df.to_sql(name = table,
+                        schema = 'posts',
+                        con = environ['MAIN_MEDIA_DATABASE'], 
+                        if_exists='append', # DO NOT CHANGE THIS
+                        index = True)
+            print("Success \n")
     
     for table, df in comments_frames.items():
         print("Writing",table)

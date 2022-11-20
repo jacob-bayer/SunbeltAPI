@@ -39,6 +39,7 @@ def clean_and_sort(df):
     else:
         raise Exception("""
         Bad ID Col. Primary ID (but not neccesarily key) must be index.
+        Index name must have 'id' in it.
         """)
     
     # Remove leading underscores from column names and replace
@@ -46,6 +47,8 @@ def clean_and_sort(df):
     df.columns = [x[1:] if x.startswith('_') else x for x in df.columns]
     df.columns = [x.replace('.','_') for x in df.columns]
     
+    # The ID column is a repetition of data available in an object's full name
+    df.drop(columns='id', inplace=True)
     # Create dictionary of column names and first real values
     cols_dict = {}
     for col in df:
@@ -64,10 +67,10 @@ def clean_and_sort(df):
     for key, obj_name in fullnamekeys.items():
         for col, value in cols_dict.items():
             if isinstance(value, str) and value.startswith(key):
-                parent = ''
                 if 'parent' in col:
-                    parent = 'parent_'
-                rename_dict[col] = f'{parent}reddit_{obj_name}_id'
+                    rename_dict[col] = 'reddit_parent_id'
+                else:
+                    rename_dict[col] = f'reddit_{obj_name}_id'
     for key, value in rename_dict.items():
         cols_dict[value] = cols_dict[key]
         del cols_dict[key]

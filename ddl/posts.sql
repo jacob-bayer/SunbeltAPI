@@ -1,5 +1,5 @@
-DROP SCHEMA posts CASCADE;
-CREATE SCHEMA posts AUTHORIZATION mainuser;
+DROP SCHEMA IF EXISTS posts CASCADE;
+CREATE SCHEMA posts;
 
 
 
@@ -181,6 +181,7 @@ CREATE TABLE posts.media (
 	oembed_thumbnail_height float8 NULL,
 	oembed_author_url text NULL,
 	reddit_video_fallback_url text NULL,
+	reddit_video_bitrate_kbps float8 null,
 	reddit_video_height float8 NULL,
 	reddit_video_width float8 NULL,
 	reddit_video_scrubber_media_url text NULL,
@@ -227,6 +228,7 @@ CREATE TABLE posts.secure_media (
 	oembed_thumbnail_url text NULL,
 	oembed_thumbnail_height float8 NULL,
 	oembed_author_url text NULL,
+	reddit_video_bitrate_kbps float8 null,
 	reddit_video_fallback_url text NULL,
 	reddit_video_height float8 NULL,
 	reddit_video_width float8 NULL,
@@ -240,6 +242,7 @@ CREATE TABLE posts.secure_media (
 	created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_posts_secure_media_secure_media_id ON posts.secure_media USING btree (secure_media_id);
+
 
 
 
