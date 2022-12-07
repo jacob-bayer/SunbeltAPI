@@ -18,8 +18,8 @@ class SchemaConfig:
     writemode: Enum
     frames: dict = None
         
-posts = SchemaConfig(name = 'posts',
-                     writemode = WriteMode.overwrite)
+schemas = [SchemaConfig('posts', WriteMode.overwrite),
+           SchemaConfig('comments', WriteMode.overwrite)]
 
 load_dotenv()
 
@@ -33,18 +33,19 @@ reddit = praw.Reddit(
 
 last_ids = {}
 db_url = environ['MAIN_MEDIA_DATABASE']
-for schema, mode in modes.items():
-    if mode == 'overwrite':
-        engine = create_engine(db_url)
-        with open(f'./ddl/{schema}.sql') as file:
+engine = create_engine(db_url)
+for schema in schemas:
+    if schema.writemode == WriteMode.overwrite:
+        with open(f'./ddl/{schema.name}.sql') as file:
             sql = file.read()
         with engine.connect() as conn:
             conn.execute(sql)
-    elif mode == 'append':
+    elif schema.writemode == WriteMode.append:
         idname = schema[:-1] + '_id'
         last_ids[schema] = pd.read_sql(f"""
-                SELECT MAX({idname}) FROM {schema}.{schema};""", 
-                                   db_url)
+                SELECT MAX({idname}) FROM {schema.name}.{schema.name};
+                """, 
+                 db_url)
 
 total_posts_to_get = 30
 batch_size = 3
