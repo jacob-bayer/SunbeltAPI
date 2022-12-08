@@ -17,154 +17,27 @@ type Postsposts {
         ups: Int
         upvote_ratio: Float
         permalink: String
-        num_reports: String
-        comment_limit: Int
-        comment_sort: String
-        mod_reason_title: String
-        pwls: Int
-        link_flair_css_class: String
-        thumbnail_height: Int
-        top_awarded_type: String
-        link_flair_text_color: String
-        author_flair_background_color: String
-        author_cakeday: String
-        total_awards_received: Int
-        thumbnail_width: Int
-        author_flair_template_id: ID
-        category: String
-        link_flair_text: String
-        score: Int
-        approved_by: String
-        thumbnail: String
-        author_flair_css_class: String
-        post_hint: String
-        mod_note: String
-        created: Float
-        link_flair_type: String
-        num_duplicates: Int
-        wls: Int
-        removed_by_category: String
-        banned_by: String
-        author_flair_type: String
-        domain: String
-        selftext_html: String
-        likes: String
-        suggested_sort: String
-        banned_at_utc: String
-        url_overridden_by_dest: String
-        view_count: String
-        author_flair_text: String
-        removed_by: String
-        distinguished: String
-        mod_reason_by: String
-        removal_reason: String
-        link_flair_background_color: String
-        report_reasons: String
-        discussion_type: String
-        num_comments: Int
-        whitelist_status: String
-        author_flair_text_color: String
-        parent_whitelist_status: String
-        url: String
-        subreddit_subscribers: Int
-        created_utc: Float
-        num_crossposts: Int
-        link_flair_template_id: ID
         }
-type PostsallAwardings {
-        awarding_id: ID
-        post_id: ID!
-        giver_coin_reward: String
-        days_of_drip_extension: Float
-        coin_price: Int
-        id: ID
-        penny_donate: String
-        coin_reward: Int
-        icon_url: String
-        days_of_premium: Float
-        icon_height: Int
-        icon_width: Int
-        static_icon_width: Int
-        start_date: Float
-        awardings_required_to_grant_benefits: Float
-        description: String
-        end_date: Float
-        sticky_duration_seconds: String
-        subreddit_coin_reward: Int
-        count: Int
-        static_icon_height: Int
-        name: String
-        icon_format: String
-        award_sub_type: String
-        penny_price: Float
-        award_type: String
-        static_icon_url: String
-        reddit_subreddit_id: ID
-        }
-type Postsgildings {
-        gilding_id: ID
-        post_id: ID!
-        reddit_gid: String
-        value: Int
-        }
-type Postsmedia {
-        media_id: ID
-        post_id: ID!
-        type: String
-        oembed_provider_url: String
-        oembed_version: String
-        oembed_title: String
-        oembed_type: String
-        oembed_thumbnail_width: Float
-        oembed_height: Float
-        oembed_width: Float
-        oembed_html: String
-        oembed_author_name: String
-        oembed_provider_name: String
-        oembed_thumbnail_url: String
-        oembed_thumbnail_height: Float
-        oembed_author_url: String
-        reddit_video_fallback_url: String
-        reddit_video_bitrate_kbps: Float
-        reddit_video_height: Float
-        reddit_video_width: Float
-        reddit_video_scrubber_media_url: String
-        reddit_video_dash_url: String
-        reddit_video_duration: Float
-        reddit_video_hls_url: String
-        reddit_video_transcoding_status: String
-        }
-type PostsmediaEmbed {
-        media_embed_id: ID
-        post_id: ID!
-        content: String
-        width: Float
-        height: Float
-        }
-type PostssecureMedia {
-        secure_media_id: ID
-        post_id: ID!
-        type: String
-        oembed_provider_url: String
-        oembed_version: String
-        oembed_title: String
-        oembed_type: String
-        oembed_thumbnail_width: Float
-        oembed_height: Float
-        oembed_width: Float
-        oembed_html: String
-        oembed_author_name: String
-        oembed_provider_name: String
-        oembed_thumbnail_url: String
-        oembed_thumbnail_height: Float
-        oembed_author_url: String
-        reddit_video_bitrate_kbps: Float
-        reddit_video_fallback_url: String
-        reddit_video_height: Float
-        reddit_video_width: Float
-        reddit_video_scrubber_media_url: String
-        reddit_video_dash_url: String
-        reddit_video_duration: Float
-        reddit_video_hls_url: String
-        reddit_video_transcoding_status: String
-        }
+
+
+type PostResult {
+    success: Boolean!
+    errors: [String]
+    post: Post
+}
+
+type PostsResult {
+    success: Boolean!
+    errors: [String]
+    post: [Post]
+}
+
+type Query {
+    Posts: PostResult!
+    post(post_id: post_id!): PostResult!
+}
+
+type DeleteTodoResult {
+    success: Boolean!
+    errors: [String]
+}
