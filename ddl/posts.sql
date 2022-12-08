@@ -6,7 +6,6 @@ CREATE SCHEMA posts;
 -- DROP TABLE posts.posts;
 CREATE TABLE posts.posts (
 	post_id int8 PRIMARY KEY NOT NULL,
-	id text NULL,
 	reddit_post_id text NULL,
 	reddit_account_id text NULL,
 	reddit_subreddit_id text NULL,
