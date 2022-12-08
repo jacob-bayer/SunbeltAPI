@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .models import Post
+from models import Post
 
 def resolve_posts(obj, info):
     try:
