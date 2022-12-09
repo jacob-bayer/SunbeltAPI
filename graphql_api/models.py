@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, Text, text
+#from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, Text, text
+from app import db
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
 
-class Post(Base):
+class Post(db.Model):
     __tablename__ = 'posts'
     __table_args__ = {'schema': 'posts'}
 
-    post_id = Column(BigInteger, primary_key=True, index=True)
-    modified_at = Column(DateTime, nullable=False)
-    #created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    reddit_post_id = Column(Text)
-    reddit_account_id = Column(Text)
-    reddit_subreddit_id = Column(Text)
-    subreddit_name_prefixed = Column(Text)
-    title = Column(Text)
-    gilded = Column(BigInteger)
-    selftext = Column(Text)
-    approved_at_utc = Column(Text)
-    downs = Column(BigInteger)
-    subreddit_type = Column(Text)
-    ups = Column(BigInteger)
-    upvote_ratio = Column(Float(53))
-    permalink = Column(Text)
+    post_id = db.Column(db.BigInteger, primary_key=True, index=True)
+    modified_at = db.Column(db.DateTime, nullable=False)
+    #created_at = db.Column(db.DateTime, nullable=False, server_default=text('now()'))
+    reddit_post_id = db.Column(db.Text)
+    reddit_account_id = db.Column(db.Text)
+    reddit_subreddit_id = db.Column(db.Text)
+    subreddit_name_prefixed = db.Column(db.Text)
+    title = db.Column(db.Text)
+    gilded = db.Column(db.BigInteger)
+    selftext = db.Column(db.Text)
+    approved_at_utc = db.Column(db.Text)
+    downs = db.Column(db.BigInteger)
+    subreddit_type = db.Column(db.Text)
+    ups = db.Column(db.BigInteger)
+    upvote_ratio = db.Column(db.Float(53))
+    permalink = db.Column(db.Text)
 
    
     def to_dict(self):

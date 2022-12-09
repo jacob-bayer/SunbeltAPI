@@ -2,11 +2,11 @@ schema {
     query: Query
 }
 
-type Postsposts {
+type Post {
         post_id: ID!
-        reddit_post_id: ID
-        reddit_account_id: ID
-        reddit_subreddit_id: ID
+        reddit_post_id: String
+        reddit_account_id: String
+        reddit_subreddit_id: String
         subreddit_name_prefixed: String
         title: String
         gilded: Int
@@ -29,15 +29,15 @@ type PostResult {
 type PostsResult {
     success: Boolean!
     errors: [String]
-    post: [Post]
+    posts: [Post]
 }
 
 type Query {
-    Posts: PostResult!
-    post(post_id: post_id!): PostResult!
+    posts: PostsResult!
+    post(postPost_id: ID!): PostResult!
 }
 
-type DeleteTodoResult {
+type DeletePostResult {
     success: Boolean!
     errors: [String]
 }

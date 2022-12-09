@@ -24,7 +24,7 @@ def get_target_columns(schema, table):
              environ['MAIN_MEDIA_DATABASE']).squeeze().to_list()
 
 def regen_schema(schema_name):
-    with open(f'../ddl/{schema_name}.sql') as file:
+    with open(f'./ddl/{schema_name}.sql') as file:
         sql = file.read()
     print(f'Regenerating {schema_name} schema')
     engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
