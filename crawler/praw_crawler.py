@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 import praw
 from os import environ
 from dotenv import load_dotenv
@@ -41,10 +42,10 @@ post_batch_size = 30
 completed = 0
 start_time = datetime.now()
 params = {}
+subreddits = []
 while completed < total_posts_to_get:
     comments = []
     posts = []
-    
     print('reading', post_batch_size, 'posts')
     api_query = reddit.subreddit("all")\
                       .top(limit = post_batch_size, 
@@ -69,6 +70,8 @@ while completed < total_posts_to_get:
             comment_vars.update(post_id_param)
             comments.append(comment_vars)
             
+        subreddits.append(vars(post.subreddit))
+        
         post_vars = vars(post)
         post_vars.update(post_id_param)
         posts.append(post_vars)
@@ -79,13 +82,21 @@ while completed < total_posts_to_get:
     print(len(posts), 'posts')
     print(len(comments), 'comments')
     
+    subreddits_df = pd.DataFrame(subreddits)
     posts_df = pd.DataFrame(posts).set_index('post_id')
     comments_df = pd.DataFrame(comments)
     comments_df.index = comments_df.index + mydb.get_next_id('comments')
     comments_df.index.name = 'comment_id'
         
-    posts_frames, objects = clean_and_normalize(posts_df, 'posts')
-    comments_frames, objects = clean_and_normalize(comments_df, 'comments')
+    posts_frames, post_objects = clean_and_normalize(posts_df, 'posts')
+    comments_frames, comment_objects = clean_and_normalize(comments_df, 'comments')
+    
+    
+    # these objects for subreddits are different here than they are
+    # when they come straight out of the post. Not sure why that is.
+    subreddit_df = pd.DataFrame([vars(x) for x in post_objects.subreddit])
+    
+    
     
     all_frames = {'posts' : posts_frames, 
               'comments': comments_frames}
