@@ -5,13 +5,13 @@ CREATE SCHEMA posts;
 
 -- DROP TABLE posts.posts;
 CREATE TABLE posts.posts (
-	post_id int8 PRIMARY KEY NOT NULL,
-	subreddit_id int8 NOT NULL REFERENCES subreddits.subreddits(subreddit_id),
+	zen_post_id int8 PRIMARY KEY NOT NULL,
+	zen_subreddit_id int8 NOT NULL REFERENCES subreddits.subreddits(zen_subreddit_id),
 	reddit_post_id text NOT NULL,
-	reddit_account_id text NOT NULL,
+	reddit_account_id TEXT NULL,
 	reddit_subreddit_id text NOT NULL,
-	modified_at timestamp NOT NULL,
-	created_at timestamp NOT NULL DEFAULT now(),
+	zen_modified_at timestamp NOT NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
 	subreddit_name_prefixed text NOT NULL,
 	title text NOT NULL,
 	gilded int8 NULL,
@@ -30,6 +30,7 @@ CREATE TABLE posts.posts (
 	clicked bool NULL,
 	hidden bool NULL,
 	pwls int8 NULL,
+	url text NOT NULL,
 	link_flair_css_class text NULL,
 	thumbnail_height int8 NULL,
 	top_awarded_type text NULL,
@@ -100,7 +101,6 @@ CREATE TABLE posts.posts (
 	author_flair_text_color text NULL,
 	parent_whitelist_status text NULL,
 	stickied bool NULL,
-	url text NULL,
 	subreddit_subscribers int8 NULL,
 	created_utc float8 NULL,
 	num_crossposts int8 NULL,
@@ -108,13 +108,14 @@ CREATE TABLE posts.posts (
 	fetched bool NULL,
 	link_flair_template_id text NULL
 );
-CREATE INDEX ix_posts_posts_post_id ON posts.posts USING btree (post_id);
+CREATE INDEX ix_posts_posts_zen_post_id ON posts.posts USING btree (zen_post_id);
 
 
 -- DROP TABLE posts.all_awardings;
 CREATE TABLE posts.all_awardings (
-	awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	post_id int8 NOT NULL REFERENCES posts.posts(post_id),
+	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
+	reddit_subreddit_id text NULL,
 	giver_coin_reward text NULL,
 	is_new bool NULL,
 	days_of_drip_extension float8 NULL,
@@ -142,30 +143,29 @@ CREATE TABLE posts.all_awardings (
 	penny_price float8 NULL,
 	award_type text NULL,
 	static_icon_url text NULL,
-	reddit_subreddit_id text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_all_awardings_awarding_id ON posts.all_awardings USING btree (awarding_id);
+CREATE INDEX ix_posts_all_awardings_zen_awarding_id ON posts.all_awardings USING btree (zen_awarding_id);
 
 
 
 -- DROP TABLE posts.gildings;
 CREATE TABLE posts.gildings (
-	gilding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	post_id int8 NOT NULL REFERENCES posts.posts(post_id),
+	zen_gilding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
 	reddit_gid text NULL,
 	value int8 NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_gildings_gilding_id ON posts.gildings USING btree (gilding_id);
+CREATE INDEX ix_posts_gildings_zen_gilding_id ON posts.gildings USING btree (zen_gilding_id);
 
 
 -- DROP TABLE posts.media;
 CREATE TABLE posts.media (
-	media_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	post_id int8 NOT NULL REFERENCES posts.posts(post_id),
+	zen_media_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
 	"type" text NULL,
 	oembed_provider_url text NULL,
 	oembed_version text NULL,
@@ -190,30 +190,30 @@ CREATE TABLE posts.media (
 	reddit_video_hls_url text NULL,
 	reddit_video_is_gif bool NULL,
 	reddit_video_transcoding_status text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_media_media_id ON posts.media USING btree (media_id);
+CREATE INDEX ix_posts_media_media_id ON posts.media USING btree (zen_media_id);
 
 
 -- DROP TABLE posts.media_embed;
 CREATE TABLE posts.media_embed (
-	media_embed_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	post_id int8 NOT NULL REFERENCES posts.posts(post_id),
+	zen_media_embed_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
 	"content" text NULL,
 	width float8 NULL,
 	scrolling bool NULL,
 	height float8 NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_media_embed_media_embed_id ON posts.media_embed USING btree (media_embed_id);
+CREATE INDEX ix_posts_media_embed_zen_media_embed_id ON posts.media_embed USING btree (zen_media_embed_id);
 
 
 -- DROP TABLE posts.secure_media;
 CREATE TABLE posts.secure_media (
-	secure_media_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	post_id int8 NOT NULL REFERENCES posts.posts(post_id),
+	zen_secure_media_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
 	"type" text NULL,
 	oembed_provider_url text NULL,
 	oembed_version text NULL,
@@ -238,10 +238,10 @@ CREATE TABLE posts.secure_media (
 	reddit_video_hls_url text NULL,
 	reddit_video_is_gif bool NULL,
 	reddit_video_transcoding_status text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_secure_media_secure_media_id ON posts.secure_media USING btree (secure_media_id);
+CREATE INDEX ix_posts_secure_media_zen_secure_media_id ON posts.secure_media USING btree (zen_secure_media_id);
 
 
 

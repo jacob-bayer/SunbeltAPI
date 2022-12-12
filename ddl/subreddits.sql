@@ -8,7 +8,7 @@ CREATE SCHEMA subreddits AUTHORIZATION mainuser;
 -- DROP TABLE subreddits.subreddits;
 
 CREATE TABLE subreddits.subreddits (
-	subreddit_id int8 NOT NULL PRIMARY KEY,
+	zen_subreddit_id int8 NOT NULL PRIMARY KEY,
 	reddit_subreddit_id text NOT NULL,
 	active_user_count int8 NULL,
 	display_name_prefixed text NULL,
@@ -19,8 +19,8 @@ CREATE TABLE subreddits.subreddits (
 	title text NULL,
 	subreddit_type text NULL,
 	suggested_comment_sort text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now(),
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
 	display_name text NULL,
 	created float8 NULL,
 	allow_polls bool NULL,
@@ -86,7 +86,6 @@ CREATE TABLE subreddits.subreddits (
 	user_sr_flair_enabled text NULL,
 	user_flair_enabled_in_sr bool NULL,
 	allow_chat_post_creation bool NULL,
-
 	user_sr_theme_enabled bool NULL,
 	link_flair_enabled bool NULL,
 	disable_contributor_requests bool NULL,
@@ -111,6 +110,6 @@ CREATE TABLE subreddits.subreddits (
 	allow_predictions_tournament bool NULL,
 	videostream_links_count float8 NULL
 );
-CREATE INDEX ix_subreddits_subreddits_subreddit_id ON subreddits.subreddits USING btree (subreddit_id);
+CREATE INDEX ix_subreddits_subreddits_zen_subreddit_id ON subreddits.subreddits USING btree (zen_subreddit_id);
 
 

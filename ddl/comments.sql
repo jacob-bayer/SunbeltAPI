@@ -10,17 +10,17 @@ CREATE SCHEMA "comments" AUTHORIZATION mainuser;
 -- DROP TABLE "comments"."comments";
 
 CREATE TABLE "comments"."comments" (
-	comment_id int8 PRIMARY KEY NOT NULL,
-	post_id int8 NULL REFERENCES posts.posts(post_id),
-	subreddit_id int8 NULL REFERENCES subreddits.subreddits(subreddit_id),
-	reddit_comment_id text NULL,
-	reddit_account_id text NULL,
-	reddit_parent_id text NULL,
-	reddit_post_id text NULL,
-	reddit_subreddit_id text NULL,
-	modified_at timestamp null,
-	created_at timestamp NOT NULL DEFAULT now(),
-	subreddit_name_prefixed text NULL,
+	zen_comment_id int8 PRIMARY KEY NOT NULL,
+	zen_post_id int8 NULL REFERENCES posts.posts(zen_post_id),
+	zen_subreddit_id int8 NULL REFERENCES subreddits.subreddits(zen_subreddit_id),
+	reddit_comment_id TEXT NOT NULL,
+	reddit_account_id TEXT NULL,
+	reddit_parent_id TEXT NOT NULL,
+	reddit_post_id TEXT NOT NULL,
+	reddit_subreddit_id TEXT NOT NULL,
+	zen_modified_at timestamP NOT NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
+	subreddit_name_prefixed TEXT NOT NULL,
 	controversiality int8 NULL,
 	ups int8 NULL,
 	downs int8 NULL,
@@ -74,10 +74,9 @@ CREATE TABLE "comments"."comments" (
 	author_flair_text text NULL,
 	author_flair_background_color text NULL,
 	collapsed_because_crowd_control text NULL,
-	num_reports text NULL,
-	fetched bool NULL
+	num_reports text NULL
 );
-CREATE INDEX ix_comments_comments_comment_id ON comments.comments USING btree (comment_id);
+CREATE INDEX ix_comments_comments_zen_comment_id ON comments.comments USING btree (zen_comment_id);
 
 
 
@@ -88,11 +87,11 @@ CREATE INDEX ix_comments_comments_comment_id ON comments.comments USING btree (c
 -- DROP TABLE "comments".all_awardings;
 
 CREATE TABLE "comments".all_awardings (
-	awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	comment_id int8 NOT NULL REFERENCES comments.comments(comment_id),
-	reddit_subreddit_id text NULL,
-	modified_at timestamp NULL,
-	created_at timestamp NOT NULL DEFAULT now(),
+	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
+	reddit_subreddit_id text NOT NULL,
+	zen_modified_at timestamp NOT NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
 	giver_coin_reward text NULL,
 	is_new bool NULL,
 	days_of_drip_extension text NULL,
@@ -120,7 +119,7 @@ CREATE TABLE "comments".all_awardings (
 	award_type text NULL,
 	static_icon_url text NULL
 );
-CREATE INDEX ix_comments_all_awardings_awarding_id ON comments.all_awardings USING btree (awarding_id);
+CREATE INDEX ix_comments_all_awardings_zen_awarding_id ON comments.all_awardings USING btree (zen_awarding_id);
 
 
 
@@ -131,13 +130,13 @@ CREATE INDEX ix_comments_all_awardings_awarding_id ON comments.all_awardings USI
 -- DROP TABLE "comments".gildings;
 
 CREATE TABLE "comments".gildings (
-	gilding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	comment_id int8 NOT NULL REFERENCES comments.comments(comment_id),
+	zen_gilding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
 	reddit_gid text NULL,
 	value numeric NULL,
-	modified_at timestamp NULL,
-    created_at timestamp NOT NULL DEFAULT now()
+	zen_modified_at timestamp NOT NULL,
+    zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_comments_gildings_gilding_id ON comments.gildings USING btree (gilding_id);
+CREATE INDEX ix_comments_gildings_zen_gilding_id ON comments.gildings USING btree (zen_gilding_id);
 
 
