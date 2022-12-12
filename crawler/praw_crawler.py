@@ -108,6 +108,7 @@ while completed < total_posts_to_get:
 
 
         ## Comments ##
+        comments_added = 0
         for comment in post.comments.list():
             comment_vars = vars(comment)
             
@@ -118,25 +119,34 @@ while completed < total_posts_to_get:
                     zen_account_id = mydb.get_existing_or_next_id(
                                         comment.author.fullname, 'accounts', 
                                         existing_id_collection = accounts)
+                    id_params['zen_account_id'] = zen_account_id
+                    
                     comment_account_vars = vars(comment.author)
                     comment_account_vars.update(
                     {'zen_account_id': zen_account_id,
                      'reddit_account_id' : 't2_' + comment_account_vars['id']
                      })
-                    if zen_account_id not in accounts.keys():
-                        accounts.update({zen_account_id:comment_account_vars})
+
+                    accounts[zen_account_id] = comment_account_vars
                     
                     comment_vars.update({'author_subscribed' : comment_account_vars['has_subscribed'],
                                       'author_is_mod': comment_account_vars['is_mod'],
                                   	'author_is_blocked': comment_account_vars['is_blocked']})
-
-            
+                    
+                    
+            print(id_params)
             comment_vars.update(id_params)
             comments.append(comment_vars)
+            comments_added = comments_added + 1
+            if comments_added > 100:
+                comments_added = 0
+                print('Sleeping 15 secs')
+                time.sleep(15)
             
 
         zen_post_id = zen_post_id + 1
-        
+        print('Sleeping 15 secs')
+        time.sleep(15)
         
     ##############
     batch_reading_time = datetime.now() - start_time
