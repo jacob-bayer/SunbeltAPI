@@ -9,7 +9,7 @@ CREATE SCHEMA accounts AUTHORIZATION mainuser;
 
 CREATE TABLE accounts.accounts (
 	zen_account_id int8 NOT NULL PRIMARY KEY,
-	reddit_account_id text NOT NULL,
+	reddit_account_id text NULL,
 	zen_modified_at timestamp NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	"name" text NOT NULL,

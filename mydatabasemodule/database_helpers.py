@@ -3,14 +3,15 @@
 import pandas as pd
 from os import environ
 from sqlalchemy import create_engine
-
+engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
+    
 def get_next_id(object_name):
     idname = object_name[:-1] + '_id'
     last_id = pd.read_sql(
             f"""
             SELECT MAX(zen_{idname}) FROM {object_name}.{object_name};
             """, 
-             environ['MAIN_MEDIA_DATABASE']).iloc[0,0]
+             engine).iloc[0,0]
     return last_id + 1 if last_id else 1
 
 def get_existing_or_next_id(object_id, object_name, existing_id_collection = None):
@@ -21,7 +22,7 @@ def get_existing_or_next_id(object_id, object_name, existing_id_collection = Non
         SELECT zen_{idname} FROM {object_name}.{object_name}
         WHERE reddit_{idname} = '{object_id}';
         """,
-        environ['MAIN_MEDIA_DATABASE'])
+        engine)
     if len(matching_id):
         return matching_id.iloc[0,0]
     elif existing_id_collection:
@@ -48,12 +49,14 @@ def get_target_columns(schema, table):
             WHERE table_schema = '{schema}'
             AND table_name = '{table}';
             """, 
-             environ['MAIN_MEDIA_DATABASE']).squeeze().to_list()
+             engine).squeeze().to_list()
 
+def vacuum_table(table_name):
+
+    
 def regen_schema(schema_name):
     with open(f'./ddl/{schema_name}.sql') as file:
         sql = file.read()
     print(f'Regenerating {schema_name} schema')
-    engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
     with engine.connect() as conn:
         conn.execute(sql)

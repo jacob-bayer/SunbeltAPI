@@ -10,6 +10,7 @@ import mydatabasemodule.database_helpers as mydb
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
+import time
 
 WriteMode = Enum('WriteMode', ['overwrite','append'])
 
@@ -82,8 +83,7 @@ while completed < total_posts_to_get:
         post_vars = vars(post)
         sub_vars = vars(post.subreddit)
         sub_vars.update({'zen_subreddit_id': zen_subreddit_id})
-        if zen_subreddit_id not in subreddits.keys():
-            subreddits.update({zen_subreddit_id:sub_vars})
+        subreddits[zen_subreddit_id] = sub_vars
         
 
         if post.author:
@@ -92,11 +92,9 @@ while completed < total_posts_to_get:
                                 existing_id_collection = accounts)
             post_account_vars = vars(post.author)
             post_account_vars.update({'zen_account_id': zen_account_id})
-            if zen_account_id not in accounts.keys():
-                accounts.update({zen_account_id:post_account_vars})
+            accounts[zen_account_id] = post_account_vars
             post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
-                              'author_is_mod': post_account_vars['is_mod'],
-                          	'author_is_blocked': post_account_vars['is_blocked']})
+                              'author_is_mod': post_account_vars['is_mod']})
               
         id_params = {'zen_post_id' : zen_post_id,
                      'zen_subreddit_id' : zen_subreddit_id,
@@ -130,21 +128,20 @@ while completed < total_posts_to_get:
                     accounts[zen_account_id] = comment_account_vars
                     
                     comment_vars.update({'author_subscribed' : comment_account_vars['has_subscribed'],
-                                      'author_is_mod': comment_account_vars['is_mod'],
-                                  	'author_is_blocked': comment_account_vars['is_blocked']})
+                                      'author_is_mod': comment_account_vars['is_mod']})
                     
                     
             print(id_params)
             comment_vars.update(id_params)
             comments.append(comment_vars)
-            comments_added = comments_added + 1
+            comments_added += 1
             if comments_added > 100:
                 comments_added = 0
                 print('Sleeping 15 secs')
                 time.sleep(15)
             
 
-        zen_post_id = zen_post_id + 1
+        zen_post_id += 1
         print('Sleeping 15 secs')
         time.sleep(15)
         
@@ -170,9 +167,9 @@ while completed < total_posts_to_get:
 
     
     all_frames = {'subreddits': subreddits_frames,
+                  'accounts': accounts_frames,
                   'posts' : posts_frames, 
                   'comments': comments_frames
-                  #'users': users_frames}
     }
     
     for schema, item_frames in all_frames.items():
@@ -190,7 +187,7 @@ while completed < total_posts_to_get:
                         if_exists='append', # DO NOT CHANGE THIS
                         index = True)
             print("Success \n")
-            
+    
     completed = completed + post_batch_size
     
     

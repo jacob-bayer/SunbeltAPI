@@ -6,6 +6,7 @@ CREATE SCHEMA posts;
 -- DROP TABLE posts.posts;
 CREATE TABLE posts.posts (
 	zen_post_id int8 PRIMARY KEY NOT NULL,
+	zen_account_id int8 NULL REFERENCES accounts.accounts(zen_account_id),
 	zen_subreddit_id int8 NOT NULL REFERENCES subreddits.subreddits(zen_subreddit_id),
 	reddit_post_id text NOT NULL,
 	reddit_account_id TEXT NULL,
@@ -23,6 +24,9 @@ CREATE TABLE posts.posts (
 	upvote_ratio float8 NULL,
 	permalink text NULL,
 	num_reports text NULL,
+	author_subscribed bool NULL,
+	author_is_mod bool NULL,
+	author_is_blocked bool NULL,
 	comment_limit int8 NULL,
 	comment_sort text NULL,
 	saved bool NULL,
@@ -86,7 +90,6 @@ CREATE TABLE posts.posts (
 	visited bool NULL,
 	removed_by text NULL,
 	distinguished text NULL,
-	author_is_blocked bool NULL,
 	mod_reason_by text NULL,
 	removal_reason text NULL,
 	link_flair_background_color text NULL,

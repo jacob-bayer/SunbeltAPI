@@ -11,8 +11,9 @@ CREATE SCHEMA "comments" AUTHORIZATION mainuser;
 
 CREATE TABLE "comments"."comments" (
 	zen_comment_id int8 PRIMARY KEY NOT NULL,
-	zen_post_id int8 NULL REFERENCES posts.posts(zen_post_id),
-	zen_subreddit_id int8 NULL REFERENCES subreddits.subreddits(zen_subreddit_id),
+	zen_post_id int8 NOT NULL REFERENCES posts.posts(zen_post_id),
+	zen_account_id int8 NULL REFERENCES accounts.accounts(zen_account_id),
+	zen_subreddit_id int8 NOT NULL REFERENCES subreddits.subreddits(zen_subreddit_id),
 	reddit_comment_id TEXT NOT NULL,
 	reddit_account_id TEXT NULL,
 	reddit_parent_id TEXT NOT NULL,
@@ -32,6 +33,8 @@ CREATE TABLE "comments"."comments" (
 	permalink text NULL,
 	author_cakeday bool NULL,
 	approved_at_utc text NULL,
+	author_subscribed bool NULL,
+	author_is_mod bool NULL,
 	author_is_blocked bool NULL,
 	comment_type text NULL,
 	mod_reason_by text NULL,
@@ -89,7 +92,6 @@ CREATE INDEX ix_comments_comments_zen_comment_id ON comments.comments USING btre
 CREATE TABLE "comments".all_awardings (
 	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
-	reddit_subreddit_id text NOT NULL,
 	zen_modified_at timestamp NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	giver_coin_reward text NULL,
