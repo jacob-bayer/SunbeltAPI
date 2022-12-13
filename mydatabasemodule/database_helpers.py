@@ -51,8 +51,6 @@ def get_target_columns(schema, table):
             """, 
              engine).squeeze().to_list()
 
-def vacuum_table(table_name):
-
     
 def regen_schema(schema_name):
     with open(f'./ddl/{schema_name}.sql') as file:

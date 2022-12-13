@@ -21,10 +21,10 @@ class SchemaConfig:
     frames: dict = None
         
 # This is the hierarchy required
-schemas = [SchemaConfig('subreddits', WriteMode.overwrite),
-           SchemaConfig('accounts', WriteMode.overwrite),
-           SchemaConfig('posts', WriteMode.overwrite),
-           SchemaConfig('comments', WriteMode.overwrite)]
+schemas = [SchemaConfig('subreddits', WriteMode.append),
+           SchemaConfig('accounts', WriteMode.append),
+           SchemaConfig('posts', WriteMode.append),
+           SchemaConfig('comments', WriteMode.append)]
 
 load_dotenv()
 
@@ -41,6 +41,70 @@ for schema in schemas:
         mydb.regen_schema(schema.name)
 
 
+top_subs = ['AskReddit',
+             'worldnews',
+             'news',
+             'Unexpected',
+             'videos',
+             'wallstreetbets',
+             'PublicFreakout',
+             'mildlyinteresting',
+             'WhitePeopleTwitter',
+             'funny',
+             'politics',
+             'Damnthatsinteresting',
+             'pics',
+             'MadeMeSmile',
+             'facepalm',
+             'movies',
+             'todayilearned',
+             'technology',
+             'nextfuckinglevel',
+             'gaming',
+             'memes',
+             'IdiotsInCars',
+             'interestingasfuck',
+             'tifu',
+             'dankmemes',
+             'aww',
+             'science',
+             'Wellthatsucks',
+             'LifeProTips',
+             'WatchPeopleDieInside',
+             'oddlysatisfying',
+             'teenagers',
+             'wholesomememes',
+             'comics',
+             'PrequelMemes',
+             'Futurology',
+             'dataisbeautiful',
+             'assholedesign',
+             'LeopardsAteMyFace',
+             'Showerthoughts',
+             'DunderMifflin',
+             'EarthPorn',
+             'books',
+             'space',
+             'trashy',
+             'me_irl',
+             'awfuleverything',
+             'gifs',
+             'IAmA',
+             'Music',
+             'rickandmorty',
+             'nottheonion',
+             'freefolk',
+             'BikiniBottomTwitter',
+             'MurderedByWords',
+             'JusticeServed',
+             'PewdiepieSubmissions',
+             'announcements',
+             'StarWarsBattlefront',
+             'thanosdidnothingwrong',
+             'MemeEconomy']
+
+subs_to_read = '+'.join(top_subs)
+
 total_posts_to_get = 3
 post_batch_size = 3
 completed = 0
@@ -53,7 +117,7 @@ while completed < total_posts_to_get:
     comments = []
     posts = []
     print('reading', post_batch_size, 'posts')
-    api_query = reddit.subreddit("all")\
+    api_query = reddit.subreddit(subs_to_read)\
                       .top(limit = post_batch_size, 
                            time_filter = 'all',
                            params = params)
