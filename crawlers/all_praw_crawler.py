@@ -11,6 +11,19 @@ from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 import time
+import logging
+import argparse
+
+parser = argparse.ArgumentParser(description="Crawler parser")
+parser.add_argument("--debug", 
+                    help = "Set the log level to debug", 
+                    default = False)
+args = parser.parse_args()
+
+if args.debug:
+    logging.basicConfig(level=logging.DEBUG)
+
+log = logging.getLogger(__name__)
 
 WriteMode = Enum('WriteMode', ['overwrite','append'])
 
