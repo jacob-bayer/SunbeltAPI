@@ -14,8 +14,14 @@ import time
 import logging
 import argparse
 
+
 parser = argparse.ArgumentParser(description="Crawler parser")
 parser.add_argument("--debug", 
+                    help = "Set the log level to debug", 
+                    action = 'store_const',
+                    const = True,
+                    default = False)
+parser.add_argument("--suppress_logs", 
                     help = "Set the log level to debug", 
                     action = 'store_const',
                     const = True,
@@ -25,6 +31,8 @@ args = parser.parse_args()
 
 if args.debug:
     logging.basicConfig(level=logging.DEBUG)
+if args.suppress_logs:
+    logging.disable(logging.INFO)
 
 log = logging.getLogger(__name__)
 
@@ -132,7 +140,7 @@ zen_subreddit_id = mydb.get_next_id('subreddits')
 while completed < total_posts_to_get:
     comments = []
     posts = []
-    print('reading', post_batch_size, 'posts')
+    log.info('Reading', post_batch_size, 'posts')
     api_query = reddit.subreddit(subs_to_read)\
                       .top(limit = post_batch_size, 
                            time_filter = 'all',
@@ -147,10 +155,13 @@ while completed < total_posts_to_get:
         _ = post.author.name
         
         # https://praw.readthedocs.io/en/stable/tutorials/comments.html#the-replace-more-method
+        current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
+        log.info(f"Replacing comments for post. Started at {current_time}. This may take a while.")
         _ = post.comments.replace_more(limit = None)
         # not calling list leaves out some comments somehow
         # all replies to comments (all comments total) will be included here
-        
+        current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
+        log.info(f"Finished replacing comments at {current_time}.")
         
         zen_subreddit_id = mydb.get_existing_or_next_id(
                             post.subreddit.fullname, 'subreddits', 
@@ -179,13 +190,14 @@ while completed < total_posts_to_get:
         id_params = {'zen_post_id' : zen_post_id,
                      'zen_subreddit_id' : zen_subreddit_id,
                      'zen_account_id' : zen_account_id}
-        print(id_params)
+        log.info("ID Params:", id_params)
 
         post_vars.update(id_params)
         posts.append(post_vars)
 
 
         ## Comments ##
+        log.info("Iterating comments.")
         comments_added = 0
         for comment in post.comments.list():
             comment_vars = vars(comment)
@@ -211,7 +223,7 @@ while completed < total_posts_to_get:
                                       'author_is_mod': comment_account_vars['is_mod']})
                     
                     
-            print(id_params)
+            log.info("ID Params:", id_params)
             comment_vars.update(id_params)
             comments.append(comment_vars)
             comments_added += 1
@@ -222,15 +234,15 @@ while completed < total_posts_to_get:
             
 
         zen_post_id += 1
-        print('Sleeping 15 secs')
+        log.info('Sleeping 15 secs')
         time.sleep(15)
         
     ##############
     batch_reading_time = datetime.now() - start_time
     params = {'after': post.name}
-    print(len(posts), 'posts')
-    print(len(comments), 'comments')
-    print(len(subreddits), 'subreddits')
+    log.info(len(posts), 'posts')
+    log.info(len(comments), 'comments')
+    log.info(len(subreddits), 'subreddits')
     
     posts_df = pd.DataFrame(posts).set_index('zen_post_id')
     subreddits_df = pd.DataFrame(subreddits.values()).set_index('zen_subreddit_id')
@@ -258,15 +270,15 @@ while completed < total_posts_to_get:
             cols_to_drop = set(df.columns).difference(target_cols)
             if len(cols_to_drop):
                 print(f'Dropping from {table}:\n', ',\n'.join(cols_to_drop))
-            print("Writing",table)
+            log.info("Writing",table)
             df['zen_modified_at'] = datetime.now()
             df.drop(columns = cols_to_drop)\
                 .to_sql(name = table,
                         schema = schema,
                         con = environ['MAIN_MEDIA_DATABASE'], 
-                        if_exists='append', # DO NOT CHANGE THIS
+                        if_exists = 'append', # DO NOT CHANGE THIS
                         index = True)
-            print("Success \n")
+            log.info("Success \n")
     
     completed = completed + post_batch_size
     
