@@ -31,8 +31,9 @@ args = parser.parse_args()
 
 if args.debug:
     logging.basicConfig(level=logging.DEBUG)
-if args.suppress_logs:
-    logging.disable(logging.INFO)
+if not args.suppress_logs:
+    logging.basicConfig(level=logging.INFO)
+    
 
 log = logging.getLogger(__name__)
 
