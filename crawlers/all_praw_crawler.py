@@ -17,7 +17,10 @@ import argparse
 parser = argparse.ArgumentParser(description="Crawler parser")
 parser.add_argument("--debug", 
                     help = "Set the log level to debug", 
+                    action = 'store_const',
+                    const = True,
                     default = False)
+
 args = parser.parse_args()
 
 if args.debug:
