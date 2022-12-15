@@ -131,7 +131,7 @@ while completed < total_posts_to_get:
         _ = post.author.name
         
         # https://praw.readthedocs.io/en/stable/tutorials/comments.html#the-replace-more-method
-        _ = post.comments.replace_more(limit = 0)
+        _ = post.comments.replace_more(limit = None)
         # not calling list leaves out some comments somehow
         # all replies to comments (all comments total) will be included here
         
