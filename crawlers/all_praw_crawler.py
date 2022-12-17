@@ -130,42 +130,52 @@ top_subs = ['AskReddit',
 
 subs_to_read = '+'.join(top_subs)
 
+# This is actually going to be dev data so it will
+# pull hot posts from a moderately active subreddit instead of all
+subs_to_read = 'datascience'
+
 total_posts_to_get = 3
 post_batch_size = 3
 completed = 0
 start_time = datetime.now()
 params = {}
 subreddits = {}
-accounts = {}
+accounts = []
 zen_subreddit_id = mydb.get_next_id('subreddits')
 while completed < total_posts_to_get:
     comments = []
-    posts = []
-    log.info(f'Reading {post_batch_size} posts')
+    posts = {}
+    log.info(f' Reading {post_batch_size} posts')
     api_query = reddit.subreddit(subs_to_read)\
-                      .top(limit = post_batch_size, 
-                           time_filter = 'all',
+                      .hot(limit = post_batch_size, # hot not top
+                           #time_filter = 'all',
                            params = params)
     
-    zen_post_id = mydb.get_next_id('posts')
+
     for post in api_query:
+        zen_post_id = mydb.get_id_params(
+                        post.fullname, 'posts', 
+                        existing_id_collection = posts)
+        
+        
         # All objects need to reach the fetched
         # state so that all the vars are available.
         # This is achieved by calling any attribute of the
         # object that is not available in the basic vars (such as url).
-        _ = post.author.name
+        # For posts this is acheived by replace more
         
         # https://praw.readthedocs.io/en/stable/tutorials/comments.html#the-replace-more-method
         current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
-        log.info(f"Replacing comments for post. Started at {current_time}. This may take a while.")
+        log.info(f" Replacing comments for post. Started at {current_time}. This may take a while.")
         _ = post.comments.replace_more(limit = None)
         # not calling list leaves out some comments somehow
         # all replies to comments (all comments total) will be included here
         current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
-        log.info(f"Finished replacing comments at {current_time}.")
+        log.info(f" Finished replacing comments at {current_time}.")
         
         zen_subreddit_id = mydb.get_existing_or_next_id(
-                            post.subreddit.fullname, 'subreddits', 
+                            post.subreddit.fullname, 
+                            'subreddits', 
                             existing_id_collection = subreddits)
         
         # Posts have a parent id and crosspost count so no real need to get these
@@ -179,19 +189,22 @@ while completed < total_posts_to_get:
         
 
         if post.author:
-            zen_account_id = mydb.get_existing_or_next_id(
-                                post.author.fullname, 'accounts', 
-                                existing_id_collection = accounts)
-            post_account_vars = vars(post.author)
-            post_account_vars.update({'zen_account_id': zen_account_id})
-            accounts[zen_account_id] = post_account_vars
-            post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
-                              'author_is_mod': post_account_vars['is_mod']})
-              
+            # TODO: Handle suspended accounts
+            _ = post.author.total_karma
+            if not post.author.__dict__.get('is_suspended'):
+                zen_account_id = mydb.get_existing_or_next_id(
+                                    post.author.fullname, 'accounts', 
+                                    existing_id_collection = accounts)
+                post_account_vars = vars(post.author)
+                post_account_vars.update({'zen_account_id': zen_account_id})
+                accounts[zen_account_id] = post_account_vars
+                post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
+                                  'author_is_mod': post_account_vars['is_mod']})
+                  
         id_params = {'zen_post_id' : zen_post_id,
                      'zen_subreddit_id' : zen_subreddit_id,
                      'zen_account_id' : zen_account_id}
-        log.info("ID Params: " + id_params)
+        log.info(" ID Params: " + str(id_params))
 
         post_vars.update(id_params)
         posts.append(post_vars)
@@ -208,7 +221,8 @@ while completed < total_posts_to_get:
                 _ = comment.author.total_karma
                 if not comment.author.__dict__.get('is_suspended'):
                     zen_account_id = mydb.get_existing_or_next_id(
-                                        comment.author.fullname, 'accounts', 
+                                        comment.author.fullname, 
+                                        'accounts', 
                                         existing_id_collection = accounts)
                     id_params['zen_account_id'] = zen_account_id
                     
@@ -224,19 +238,17 @@ while completed < total_posts_to_get:
                                       'author_is_mod': comment_account_vars['is_mod']})
                     
                     
-            log.info("ID Params: "+ id_params)
+            log.info(" ID Params: "+ str(id_params))
             comment_vars.update(id_params)
             comments.append(comment_vars)
             comments_added += 1
             if comments_added > 100:
-                comments_added = 0
-                print('Sleeping 15 secs')
-                time.sleep(15)
+                break
             
 
         zen_post_id += 1
-        log.info('Sleeping 15 secs')
-        time.sleep(15)
+        #log.info('Sleeping 30 secs between posts')
+        #time.sleep(30)
         
     ##############
     batch_reading_time = datetime.now() - start_time
@@ -270,9 +282,9 @@ while completed < total_posts_to_get:
             target_cols = mydb.get_target_columns(schema, table)
             cols_to_drop = set(df.columns).difference(target_cols)
             if len(cols_to_drop):
-                cols_to_drop = '\n'.join(cols_to_drop)
-                log.info(f"Dropping from {table}:\n {cols_to_drop}")
-            log.info("Writing" + table)
+                cols_to_drop_text = '\n'.join(cols_to_drop)
+                log.info(f"Dropping from {table}:\n {cols_to_drop_text}")
+            log.info("Writing " + table)
             df['zen_modified_at'] = datetime.now()
             df.drop(columns = cols_to_drop)\
                 .to_sql(name = table,

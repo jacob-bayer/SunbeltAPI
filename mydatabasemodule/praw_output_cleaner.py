@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
+import logging
+
+log = logging.getLogger("CLEANER")
 
 def json_normalize_with_id(df):
     newdf = pd.json_normalize(df).set_index(df.index).dropna(how='all')
@@ -32,7 +35,7 @@ def clean_and_sort(df):
     Removes columns whose values are python objects and returns a 
     dictionary of dataframes
     """
-    print('Cleaning and sorting')
+    log.info('Cleaning and sorting')
     id_col = df.index.name or ''
     if 'id' in id_col:
         df = df.reset_index()
@@ -48,7 +51,8 @@ def clean_and_sort(df):
     df.columns = [x.replace('.','_') for x in df.columns]
     
     # The ID column is a repetition of data available in an object's full name
-    df.drop(columns='id', inplace=True)
+    if 'id' in df.columns:
+        df.drop(columns='id', inplace=True)
     # Create dictionary of column names and first real values
     cols_dict = {}
     for col in df:
@@ -72,8 +76,12 @@ def clean_and_sort(df):
                 else:
                     rename_dict[col] = f'reddit_{obj_name}_id'
     for key, value in rename_dict.items():
-        cols_dict[value] = cols_dict[key]
-        del cols_dict[key]
+        # This adds the columns to be renamed to the cols_dict so that
+        # they remain in the dataframe due to their presence in the cols_dict
+        # keys
+        if not cols_dict.get(value):
+            cols_dict[value] = cols_dict[key]
+            del cols_dict[key]
                 
     df = df.rename(columns=rename_dict)
     
@@ -84,7 +92,7 @@ def clean_and_sort(df):
     keep_cols = [id_col]
     for col, value in cols_dict.items():
         is_iterable = hasattr(value, '__iter__') and not isinstance(value, str)
-        is_class = hasattr(value, '__module__')
+        is_class = hasattr(value, '__module__') and not isinstance(value, pd.Timestamp)
         if is_class:
             class_cols.append(col)
         elif is_iterable:
@@ -105,9 +113,9 @@ def normalize_iterables(df):
     """
     
     final_dict = {}
-    for table, data in df.iteritems():
+    for table, data in df.items():
         if table == 'gildings':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             gildings = json_normalize_with_id(data)
             gildings = gildings.melt(value_vars = gildings.columns, 
                                      var_name = 'reddit_gid', 
@@ -117,18 +125,19 @@ def normalize_iterables(df):
             final_dict['gildings'] = gildings
                         
         if table == 'all_awardings':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             data = data[data.map(lambda x: len(x) > 0)]
-            all_awardings = pd_json_normalize_list_of_dicts(data)
-            # I don't care about the iterables they are stupid for this one
-            all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
-            keepcols = [x for x in all_awardings.columns 
-                       if 'tiers_by_required_awardings' not in x]
-            all_awardings = all_awardings[keepcols]
-            final_dict['all_awardings'] = all_awardings
+            if len(data):
+                all_awardings = pd_json_normalize_list_of_dicts(data)
+                # I don't care about the iterables they are stupid for this one
+                all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
+                keepcols = [x for x in all_awardings.columns 
+                           if 'tiers_by_required_awardings' not in x]
+                all_awardings = all_awardings[keepcols]
+                final_dict['all_awardings'] = all_awardings
             
         if table == 'previews':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             previews = json_normalize_with_id(data)
             previews = clean_and_sort(previews)
             images = pd_json_normalize_list_of_dicts(previews['iterables']['images'])
@@ -138,13 +147,13 @@ def normalize_iterables(df):
             final_dict['previews'] = pd.concat([previews,images], axis=1)
             
         if table == 'media':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['media'] = json_normalize_with_id(data)
         if table == 'media_embed':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['media_embed'] = json_normalize_with_id(data)
         if table == 'secure_media': 
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['secure_media'] = json_normalize_with_id(data)
         
     return final_dict
