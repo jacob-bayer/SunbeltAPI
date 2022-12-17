@@ -2,14 +2,43 @@
 
 import pandas as pd
 import logging
+from mydatabasemodule import database_helpers as mydb
 
 log = logging.getLogger("CLEANER")
+
+def append_praw_object_vars_to_list(praw_object, dict_to_append):
+    praw_class_to_schema = {
+                 'Submission' : 'posts',
+                 'Comment'    : 'comments',
+                 'Subreddit'  : 'subreddits',
+                 'Redditor'   : 'accounts'
+                 }
+    
+    input_class_name = praw_object.__class__.__name__
+    
+    schema_name = praw_class_to_schema[input_class_name]
+    
+    unique_reddit_id = praw_object.fullname
+    
+    zen_ids = mydb.get_id_params(
+                    unique_reddit_id, schema_name, 
+                    existing_id_collection = dict_to_append)
+    
+
+    obj_vars = vars(praw_object)
+    # everything has a full name, but for some reason the Redditor
+    # object does not return the full name in the vars
+    obj_vars['unique_reddit_id'] = unique_reddit_id
+    
+    obj_vars.update(zen_ids)
+    
+    dict_to_append.append(obj_vars)
 
 def has_valid_praw_author(praw_object_with_author):
     valid = False
     if praw_object_with_author.author:
         # TODO: Add suspended accounts to dwh
-        _ = praw_object_with_author.author.total_karma
+        _ = praw_object_with_author.author._fetch()
         if not praw_object_with_author.author.__dict__.get('is_suspended'):
             valid = True
             
@@ -82,15 +111,20 @@ def clean_and_sort(df):
         for col, value in cols_dict.items():
             if isinstance(value, str) and value.startswith(key):
                 if 'parent' in col:
-                    rename_dict[col] = 'reddit_parent_id'
+                    rename_col = 'reddit_parent_id'
                 else:
-                    rename_dict[col] = f'reddit_{obj_name}_id'
+                    rename_col = f'reddit_{obj_name}_id'
+                    
+                if rename_col not in rename_dict.values():
+                    rename_dict[col] = rename_col
+                    
     for key, value in rename_dict.items():
         # This adds the columns to be renamed to the cols_dict so that
         # they remain in the dataframe due to their presence in the cols_dict
         # keys
         if not cols_dict.get(value):
             cols_dict[value] = cols_dict[key]
+            print(key, value)
             del cols_dict[key]
                 
     df = df.rename(columns=rename_dict)

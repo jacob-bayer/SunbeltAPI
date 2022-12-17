@@ -70,7 +70,6 @@ CREATE TABLE posts.post_details (
 	num_reports text NULL,
 	author_subscribed bool NULL,
 	author_is_mod bool NULL,
-	author_is_blocked bool NULL,
 	comment_limit int8 NULL,
 	comment_sort text NULL,
 	parent_whitelist_status text NULL,

@@ -6,7 +6,7 @@ from os import environ
 from sqlalchemy import create_engine
 import logging
 
-log = logging.getLogger(" DB-HELPER")
+log = logging.getLogger("ZEN-HELPER")
 engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
 
 
@@ -55,8 +55,11 @@ def get_id_params(object_id, object_name,
         return matching_ids.T.to_dict()
          
     elif existing_id_collection:
-        existing_ids = {x: existing_id_collection[-1][x] for x in object_ids}
-        existing_ids[main_id] += 1
+        # Not found in db, so make a new primary id and start
+        # the version and detail ids from 1
+        new_ids = {x: existing_id_collection[-1][x] for x in object_ids}
+        new_ids[main_id] += 1
+        return new_ids
         
         """
         if isinstance(existing_id_collection, list):
@@ -91,6 +94,6 @@ def get_target_columns(schema, table):
 def regen_schema(schema_name):
     with open(f'./ddl/{schema_name}.sql') as file:
         sql = file.read()
-    print(f'Regenerating {schema_name} schema')
+    log.info(f' Regenerating {schema_name} schema')
     with engine.connect() as conn:
         conn.execute(sql)
