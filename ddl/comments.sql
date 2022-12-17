@@ -19,18 +19,36 @@ CREATE TABLE "comments"."comments" (
 	reddit_parent_id TEXT NOT NULL,
 	reddit_post_id TEXT NOT NULL,
 	reddit_subreddit_id TEXT NOT NULL,
-	zen_modified_at timestamP NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	subreddit_name_prefixed TEXT NOT NULL,
+	created_utc numeric NULL,
+	depth int8 NULL,
+	permalink text NULL,
+	is_submitter bool NULL,
+	created numeric NULL
+);
+CREATE INDEX ix_comments_comments_zen_comment_id ON comments.comments USING btree (zen_comment_id);
+
+CREATE TABLE COMMENTS.comment_versions (
+	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
+	zen_comment_version_id int8 NOT NULL,
+	zen_comment_detail_id int8 NOT NULL UNIQUE,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
+	PRIMARY KEY (zen_comment_id, zen_comment_version_id, zen_comment_detail_id)
+);
+CREATE INDEX ix_comments_comment_versions ON comments.comment_versions USING btree (zen_comment_id, zen_comment_version_id, zen_comment_detail_id);
+
+
+CREATE TABLE COMMENTS.comment_details (
+	zen_comment_detail_id int8 NOT NULL PRIMARY KEY REFERENCES comments.comment_versions(zen_comment_detail_id),
+	zen_modified_at timestamp NULL,
+	zen_created_at timestamp NOT NULL DEFAULT now(),
 	controversiality int8 NULL,
 	ups int8 NULL,
 	downs int8 NULL,
-	created_utc numeric NULL,
 	score int8 NULL,
-	"depth" int8 NULL,
 	body text NULL,
 	edited text NULL,
-	permalink text NULL,
 	author_cakeday bool NULL,
 	approved_at_utc text NULL,
 	author_subscribed bool NULL,
@@ -57,7 +75,6 @@ CREATE TABLE "comments"."comments" (
 	collapsed bool NULL,
 	top_awarded_type text NULL,
 	author_flair_css_class text NULL,
-	is_submitter bool NULL,
 	author_patreon_flair bool NULL,
 	body_html text NULL,
 	removal_reason text NULL,
@@ -71,16 +88,14 @@ CREATE TABLE "comments"."comments" (
 	author_flair_text_color text NULL,
 	score_hidden bool NULL,
 	subreddit_type text NULL,
-	"locked" bool NULL,
+	locked bool NULL,
 	report_reasons text NULL,
-	created numeric NULL,
 	author_flair_text text NULL,
 	author_flair_background_color text NULL,
 	collapsed_because_crowd_control text NULL,
 	num_reports text NULL
 );
-CREATE INDEX ix_comments_comments_zen_comment_id ON comments.comments USING btree (zen_comment_id);
-
+CREATE INDEX ix_comments_comment_details ON comments.comment_details USING btree (zen_comment_detail_id);
 
 
 -- "comments".all_awardings definition
@@ -91,7 +106,7 @@ CREATE INDEX ix_comments_comments_zen_comment_id ON comments.comments USING btre
 
 CREATE TABLE "comments".all_awardings (
 	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
+	zen_comment_detail_id int8 NOT NULL REFERENCES comments.comment_details(zen_comment_detail_id),
 	zen_modified_at timestamp NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	giver_coin_reward text NULL,
@@ -133,12 +148,31 @@ CREATE INDEX ix_comments_all_awardings_zen_awarding_id ON comments.all_awardings
 
 CREATE TABLE "comments".gildings (
 	zen_gilding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	zen_comment_id int8 NOT NULL REFERENCES comments.comments(zen_comment_id),
+	zen_comment_detail_id int8 NOT NULL REFERENCES comments.comment_details(zen_comment_detail_id),
 	reddit_gid text NULL,
 	value numeric NULL,
 	zen_modified_at timestamp NOT NULL,
     zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_comments_gildings_zen_gilding_id ON comments.gildings USING btree (zen_gilding_id);
+
+/* 
+ * This view assumes that the max detail id and max version id will
+ * always be associated with one another. There should never be a case
+ * where the max detail id is not the max version id. If that happens,
+ * this needs to change.
+ */
+CREATE VIEW COMMENTs.most_recent_comment_details AS (
+SELECT 
+reddit_comment_id AS reddit_lookup_id,
+zen_comment_id, 
+MAX(zen_comment_version_id) AS zen_comment_version_id,
+MAX(zen_comment_detail_id) AS zen_comment_detail_id
+FROM comments.comment_versions
+JOIN comments.comments USING (zen_comment_id)
+GROUP BY zen_comment_id, reddit_comment_id
+)
+
+
 
 

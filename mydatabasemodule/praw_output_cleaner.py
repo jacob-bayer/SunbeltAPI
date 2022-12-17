@@ -5,6 +5,16 @@ import logging
 
 log = logging.getLogger("CLEANER")
 
+def has_valid_praw_author(praw_object_with_author):
+    valid = False
+    if praw_object_with_author.author:
+        # TODO: Add suspended accounts to dwh
+        _ = praw_object_with_author.author.total_karma
+        if not praw_object_with_author.author.__dict__.get('is_suspended'):
+            valid = True
+            
+    return valid
+
 def json_normalize_with_id(df):
     newdf = pd.json_normalize(df).set_index(df.index).dropna(how='all')
     newdf.columns = [x.replace('.','_') for x in newdf.columns]

@@ -5,7 +5,7 @@ import praw
 from os import environ
 from dotenv import load_dotenv
 import pandas as pd
-from mydatabasemodule.praw_output_cleaner import clean_and_normalize
+from mydatabasemodule.praw_output_cleaner import clean_and_normalize, has_valid_praw_author
 import mydatabasemodule.database_helpers as mydb
 from datetime import datetime
 from dataclasses import dataclass
@@ -132,6 +132,7 @@ subs_to_read = '+'.join(top_subs)
 
 # This is actually going to be dev data so it will
 # pull hot posts from a moderately active subreddit instead of all
+# This will ensure that all data is real but not overwhelming to pull
 subs_to_read = 'datascience'
 
 total_posts_to_get = 3
@@ -139,12 +140,11 @@ post_batch_size = 3
 completed = 0
 start_time = datetime.now()
 params = {}
-subreddits = {}
+subreddits = []
 accounts = []
-zen_subreddit_id = mydb.get_next_id('subreddits')
 while completed < total_posts_to_get:
     comments = []
-    posts = {}
+    posts = []
     log.info(f' Reading {post_batch_size} posts')
     api_query = reddit.subreddit(subs_to_read)\
                       .hot(limit = post_batch_size, # hot not top
@@ -153,11 +153,34 @@ while completed < total_posts_to_get:
     
 
     for post in api_query:
-        zen_post_id = mydb.get_id_params(
+        subreddit = post.subreddit
+        
+        zen_post_ids = mydb.get_id_params(
                         post.fullname, 'posts', 
                         existing_id_collection = posts)
         
+        zen_subreddit_ids = mydb.get_id_params(
+                            subreddit.fullname,
+                            'subreddits',
+                            existing_id_collection = subreddits)
         
+        post_vars = vars(post)
+        # is there user data in the sub vars that is needed?
+        # cases where 'user' in sub_vars key
+        sub_vars = vars(subreddit)
+        sub_vars.update(zen_subreddit_ids)
+        
+        if has_valid_praw_author(post):
+            zen_account_id = mydb.get_id_params(
+                                post.author.fullname, 'accounts', 
+                                existing_id_collection = accounts)
+            post_account_vars = vars(post.author)
+            post_account_vars.update(zen_account_id)
+            post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
+                              'author_is_mod': post_account_vars['is_mod']})
+              
+
+
         # All objects need to reach the fetched
         # state so that all the vars are available.
         # This is achieved by calling any attribute of the
@@ -173,41 +196,11 @@ while completed < total_posts_to_get:
         current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
         log.info(f" Finished replacing comments at {current_time}.")
         
-        zen_subreddit_id = mydb.get_existing_or_next_id(
-                            post.subreddit.fullname, 
-                            'subreddits', 
-                            existing_id_collection = subreddits)
         
         # Posts have a parent id and crosspost count so no real need to get these
         #crossposts = crossposts + [vars(x) for x in post.duplicates()]
-                    
-
-        post_vars = vars(post)
-        sub_vars = vars(post.subreddit)
-        sub_vars.update({'zen_subreddit_id': zen_subreddit_id})
-        subreddits[zen_subreddit_id] = sub_vars
         
-
-        if post.author:
-            # TODO: Handle suspended accounts
-            _ = post.author.total_karma
-            if not post.author.__dict__.get('is_suspended'):
-                zen_account_id = mydb.get_existing_or_next_id(
-                                    post.author.fullname, 'accounts', 
-                                    existing_id_collection = accounts)
-                post_account_vars = vars(post.author)
-                post_account_vars.update({'zen_account_id': zen_account_id})
-                accounts[zen_account_id] = post_account_vars
-                post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
-                                  'author_is_mod': post_account_vars['is_mod']})
-                  
-        id_params = {'zen_post_id' : zen_post_id,
-                     'zen_subreddit_id' : zen_subreddit_id,
-                     'zen_account_id' : zen_account_id}
-        log.info(" ID Params: " + str(id_params))
-
-        post_vars.update(id_params)
-        posts.append(post_vars)
+      
 
 
         ## Comments ##
@@ -216,37 +209,29 @@ while completed < total_posts_to_get:
         for comment in post.comments.list():
             comment_vars = vars(comment)
             
-            if comment.author:
-                # TODO: Handle suspended accounts
-                _ = comment.author.total_karma
-                if not comment.author.__dict__.get('is_suspended'):
-                    zen_account_id = mydb.get_existing_or_next_id(
-                                        comment.author.fullname, 
-                                        'accounts', 
-                                        existing_id_collection = accounts)
-                    id_params['zen_account_id'] = zen_account_id
-                    
-                    comment_account_vars = vars(comment.author)
-                    comment_account_vars.update(
-                    {'zen_account_id': zen_account_id,
-                     'reddit_account_id' : 't2_' + comment_account_vars['id']
-                     })
-
-                    accounts[zen_account_id] = comment_account_vars
-                    
-                    comment_vars.update({'author_subscribed' : comment_account_vars['has_subscribed'],
-                                      'author_is_mod': comment_account_vars['is_mod']})
-                    
-                    
-            log.info(" ID Params: "+ str(id_params))
-            comment_vars.update(id_params)
+            zen_comment_ids = mydb.get_id_params(
+                                comment.fullname, 
+                                'comments', 
+                                existing_id_collection = comments)
+           
+            
+            if has_valid_praw_author(comment):
+                zen_account_ids = mydb.get_id_params(
+                                    comment.author.fullname, 
+                                    'accounts', 
+                                    existing_id_collection = accounts)
+               
+                comment_account_vars = vars(comment.author)
+                zen_account_ids['reddit_account_id'] = 't2_' + comment_account_vars['id']
+                comment_account_vars.update(zen_account_ids)
+                comment_vars['author_subscribed'] = comment_account_vars['has_subscribed']
+                comment_vars['author_is_mod'] = comment_account_vars['is_mod']
+                zen_comment_ids['zen_account_id'] = zen_account_ids['zen_account_id']
+                
+            comment_vars.update(zen_comment_ids)
             comments.append(comment_vars)
             comments_added += 1
-            if comments_added > 100:
-                break
             
-
-        zen_post_id += 1
         #log.info('Sleeping 30 secs between posts')
         #time.sleep(30)
         
@@ -256,6 +241,7 @@ while completed < total_posts_to_get:
     log.info(f"{len(posts)} posts")
     log.info(f"{len(comments)} comments")
     log.info(f"{len(subreddits)} subreddits")
+    log.info(f"{len(accounts)} accounts")
     
     posts_df = pd.DataFrame(posts).set_index('zen_post_id')
     subreddits_df = pd.DataFrame(subreddits.values()).set_index('zen_subreddit_id')

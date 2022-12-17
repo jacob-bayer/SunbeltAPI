@@ -12,7 +12,7 @@ engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
 
 def get_next_id(object_name):
     object_name = object_name[:-1] if object_name[-1] == 's' else object_name
-    QUERY = f"SELECT MAX(zen_{object_name}_id) FROM most_recent_{object_name}_details;"
+    QUERY = f"SELECT MAX(zen_{object_name}_id) FROM {object_name}s.most_recent_{object_name}_details;"
     log.debug(" QUERY:" + QUERY)
     last_id = pd.read_sql(QUERY, engine).iloc[0,0]
     return last_id + 1 if last_id else 1
@@ -31,7 +31,7 @@ def get_id_params(object_id, object_name,
     try:
         QUERY = f"""
             SELECT {obj_id_fields}
-            FROM most_recent_{object_name}_details
+            FROM {object_name}s.most_recent_{object_name}_details
             WHERE reddit_lookup_id = '{object_id}';
             """
         log.debug(" QUERY:" + QUERY)
