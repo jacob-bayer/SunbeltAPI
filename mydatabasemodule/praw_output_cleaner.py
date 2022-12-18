@@ -6,7 +6,7 @@ from mydatabasemodule import database_helpers as mydb
 
 log = logging.getLogger("CLEANER")
 
-def append_praw_object_vars_to_list(praw_object, dict_to_append):
+def append_praw_object_vars_to_list(praw_object, list_to_append):
     praw_class_to_schema = {
                  'Submission' : 'posts',
                  'Comment'    : 'comments',
@@ -22,7 +22,7 @@ def append_praw_object_vars_to_list(praw_object, dict_to_append):
     
     zen_ids = mydb.get_id_params(
                     unique_reddit_id, schema_name, 
-                    existing_id_collection = dict_to_append)
+                    existing_id_collection = list_to_append)
     
 
     obj_vars = vars(praw_object)
@@ -32,7 +32,7 @@ def append_praw_object_vars_to_list(praw_object, dict_to_append):
     
     obj_vars.update(zen_ids)
     
-    dict_to_append.append(obj_vars)
+    list_to_append.append(obj_vars)
 
 def has_valid_praw_author(praw_object_with_author):
     valid = False
@@ -99,6 +99,14 @@ def clean_and_sort(df):
         cols_dict.update({col: df[col].iloc[idx or 0]})
     del cols_dict[id_col]
     
+# =============================================================================
+#     # Misc stuff
+#     convert_to_bool = ['gilded','edited']
+#     for col in convert_to_bool:
+#         if col in df.columns:
+#             df[col] = df[col].astype(bool)
+# =============================================================================
+    
     # Cols to rename to reddit_obj_id
     fullnamekeys = {'t1_' : 'comment',
                     't2_' : 'account',
@@ -124,7 +132,6 @@ def clean_and_sort(df):
         # keys
         if not cols_dict.get(value):
             cols_dict[value] = cols_dict[key]
-            print(key, value)
             del cols_dict[key]
                 
     df = df.rename(columns=rename_dict)

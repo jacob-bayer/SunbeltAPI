@@ -61,14 +61,14 @@ CREATE TABLE posts.post_details (
 	zen_post_detail_id int8 NOT NULL PRIMARY KEY REFERENCES posts.post_versions(zen_post_detail_id),
 	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
-	gilded bool NULL,
+	gilded int8 NULL,
 	selftext text NULL,
 	downs int8 NULL,
 	ups int8 NULL,
 	upvote_ratio float8 NULL,
 	num_comments int8 NULL,
 	num_reports text NULL,
-	author_subscribed bool NULL,
+	author_has_subscribed bool NULL,
 	author_is_mod bool NULL,
 	comment_limit int8 NULL,
 	comment_sort text NULL,
@@ -79,7 +79,7 @@ CREATE TABLE posts.post_details (
 	total_awards_received int8 NULL,
 	score int8 NULL,
 	author_premium bool NULL,
-	edited bool NULL,
+	edited text NULL,
 	saved bool NULL,
 	mod_reason_title text NULL,
 	clicked bool NULL,
@@ -288,8 +288,8 @@ reddit_post_id AS reddit_lookup_id,
 zen_post_id, 
 MAX(zen_post_version_id) AS zen_post_version_id,
 MAX(zen_post_detail_id) AS zen_post_detail_id
-FROM posts.post_versions
-JOIN posts.posts USING (zen_post_id)
+FROM posts.posts
+LEFT JOIN posts.post_versions USING (zen_post_id)
 GROUP BY zen_post_id, reddit_post_id
 )
 
