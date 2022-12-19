@@ -5,7 +5,13 @@ import praw
 from os import environ
 from dotenv import load_dotenv
 import pandas as pd
-from mydatabasemodule.praw_output_cleaner import clean_and_normalize
+
+from mydatabasemodule.praw_output_cleaner import (
+                        clean_and_normalize, 
+                        has_valid_praw_author,
+                        append_praw_object_vars_to_list
+                        )
+
 import mydatabasemodule.database_helpers as mydb
 from datetime import datetime
 from dataclasses import dataclass
@@ -26,7 +32,6 @@ parser.add_argument("--suppress_logs",
                     action = 'store_const',
                     const = True,
                     default = False)
-
 args = parser.parse_args()
 
 if args.debug:
@@ -66,222 +71,121 @@ for schema in schemas:
         mydb.regen_schema(schema.name)
 
 
-top_subs = ['AskReddit',
-             'worldnews',
-             'news',
-             'Unexpected',
-             'videos',
-             'wallstreetbets',
-             'PublicFreakout',
-             'mildlyinteresting',
-             'WhitePeopleTwitter',
-             'funny',
-             'politics',
-             'Damnthatsinteresting',
-             'pics',
-             'MadeMeSmile',
-             'facepalm',
-             'movies',
-             'todayilearned',
-             'technology',
-             'nextfuckinglevel',
-             'gaming',
-             'memes',
-             'IdiotsInCars',
-             'interestingasfuck',
-             'tifu',
-             'dankmemes',
-             'aww',
-             'science',
-             'Wellthatsucks',
-             'LifeProTips',
-             'WatchPeopleDieInside',
-             'oddlysatisfying',
-             'teenagers',
-             'wholesomememes',
-             'comics',
-             'PrequelMemes',
-             'Futurology',
-             'dataisbeautiful',
-             'assholedesign',
-             'LeopardsAteMyFace',
-             'Showerthoughts',
-             'DunderMifflin',
-             'EarthPorn',
-             'books',
-             'space',
-             'trashy',
-             'me_irl',
-             'awfuleverything',
-             'gifs',
-             'IAmA',
-             'Music',
-             'rickandmorty',
-             'nottheonion',
-             'freefolk',
-             'BikiniBottomTwitter',
-             'MurderedByWords',
-             'JusticeServed',
-             'PewdiepieSubmissions',
-             'announcements',
-             'StarWarsBattlefront',
-             'thanosdidnothingwrong',
-             'MemeEconomy']
-
-subs_to_read = '+'.join(top_subs)
-
-total_posts_to_get = 3
-post_batch_size = 3
+# This is actually going to be dev data so it will
+# pull hot posts from a moderately active subreddit instead of all
+# This will ensure that all data is real but not overwhelming to pull
+subs_to_read = 'pushshift'
+author_transfer_to_parent = ['is_mod', 'has_subscribed']
+total_posts_to_get = 10
+post_batch_size = 10
 completed = 0
 start_time = datetime.now()
 params = {}
-subreddits = {}
-accounts = {}
-zen_subreddit_id = mydb.get_next_id('subreddits')
 while completed < total_posts_to_get:
+    seen_subreddits = []
+    subreddits = []
+    seen_accounts = []
+    accounts = []
     comments = []
     posts = []
-    log.info(f'Reading {post_batch_size} posts')
+    log.info(f' Reading {post_batch_size} posts')
     api_query = reddit.subreddit(subs_to_read)\
-                      .top(limit = post_batch_size, 
-                           time_filter = 'all',
+                      .top(limit = post_batch_size, # hot not top
+                           time_filter = 'week',
                            params = params)
-    
-    zen_post_id = mydb.get_next_id('posts')
+                      
+
     for post in api_query:
-        # All objects need to reach the fetched
-        # state so that all the vars are available.
-        # This is achieved by calling any attribute of the
-        # object that is not available in the basic vars (such as url).
-        _ = post.author.name
+        if post.subreddit.fullname not in seen_subreddits:
+            append_praw_object_vars_to_list(post.subreddit, subreddits)
+            seen_subreddits.append(post.subreddit.fullname)
+            
+        append_praw_object_vars_to_list(post, posts)
+        posts[-1]['zen_subreddit_id'] = subreddits[-1]['zen_subreddit_id']
         
-        # https://praw.readthedocs.io/en/stable/tutorials/comments.html#the-replace-more-method
-        current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
-        log.info(f"Replacing comments for post. Started at {current_time}. This may take a while.")
+        if has_valid_praw_author(post):
+            if post.author.fullname not in seen_accounts:
+                append_praw_object_vars_to_list(post.author, accounts)
+                seen_accounts.append(post.author.fullname)
+                for field in author_transfer_to_parent:
+                    posts[-1]['author_' + field] = accounts[-1].pop(field, None)
+                    posts[-1]['zen_account_id'] = accounts[-1]['zen_account_id']
+
         _ = post.comments.replace_more(limit = None)
-        # not calling list leaves out some comments somehow
-        # all replies to comments (all comments total) will be included here
-        current_time = datetime.now().strftime("%b-%d %-I:%M:%S %p")
-        log.info(f"Finished replacing comments at {current_time}.")
-        
-        zen_subreddit_id = mydb.get_existing_or_next_id(
-                            post.subreddit.fullname, 'subreddits', 
-                            existing_id_collection = subreddits)
-        
-        # Posts have a parent id and crosspost count so no real need to get these
-        #crossposts = crossposts + [vars(x) for x in post.duplicates()]
-                    
-
-        post_vars = vars(post)
-        sub_vars = vars(post.subreddit)
-        sub_vars.update({'zen_subreddit_id': zen_subreddit_id})
-        subreddits[zen_subreddit_id] = sub_vars
-        
-
-        if post.author:
-            zen_account_id = mydb.get_existing_or_next_id(
-                                post.author.fullname, 'accounts', 
-                                existing_id_collection = accounts)
-            post_account_vars = vars(post.author)
-            post_account_vars.update({'zen_account_id': zen_account_id})
-            accounts[zen_account_id] = post_account_vars
-            post_vars.update({'author_subscribed' : post_account_vars['has_subscribed'],
-                              'author_is_mod': post_account_vars['is_mod']})
-              
-        id_params = {'zen_post_id' : zen_post_id,
-                     'zen_subreddit_id' : zen_subreddit_id,
-                     'zen_account_id' : zen_account_id}
-        log.info("ID Params: " + id_params)
-
-        post_vars.update(id_params)
-        posts.append(post_vars)
-
-
-        ## Comments ##
-        log.info("Iterating comments.")
-        comments_added = 0
-        for comment in post.comments.list():
-            comment_vars = vars(comment)
+        all_comments = post.comments.list()
+        log.info(f" Fetching {len(all_comments)} comments.")
+        for comment in all_comments:
+            append_praw_object_vars_to_list(comment, comments)
             
-            if comment.author:
-                # TODO: Handle suspended accounts
-                _ = comment.author.total_karma
-                if not comment.author.__dict__.get('is_suspended'):
-                    zen_account_id = mydb.get_existing_or_next_id(
-                                        comment.author.fullname, 'accounts', 
-                                        existing_id_collection = accounts)
-                    id_params['zen_account_id'] = zen_account_id
-                    
-                    comment_account_vars = vars(comment.author)
-                    comment_account_vars.update(
-                    {'zen_account_id': zen_account_id,
-                     'reddit_account_id' : 't2_' + comment_account_vars['id']
-                     })
-
-                    accounts[zen_account_id] = comment_account_vars
-                    
-                    comment_vars.update({'author_subscribed' : comment_account_vars['has_subscribed'],
-                                      'author_is_mod': comment_account_vars['is_mod']})
-                    
-                    
-            log.info("ID Params: "+ id_params)
-            comment_vars.update(id_params)
-            comments.append(comment_vars)
-            comments_added += 1
-            if comments_added > 100:
-                comments_added = 0
-                print('Sleeping 15 secs')
-                time.sleep(15)
+            if has_valid_praw_author(comment):
+                append_praw_object_vars_to_list(comment.author, accounts)
+                for field in author_transfer_to_parent:
+                    comments[-1]['author_' + field] = accounts[-1].pop(field, None)
             
+            comments[-1]['zen_post_id'] = posts[-1]['zen_post_id']
+            comments[-1]['zen_subreddit_id'] = subreddits[-1]['zen_subreddit_id']
 
-        zen_post_id += 1
-        log.info('Sleeping 15 secs')
-        time.sleep(15)
-        
+    
     ##############
     batch_reading_time = datetime.now() - start_time
     params = {'after': post.name}
-    log.info(f"{len(posts)} posts")
-    log.info(f"{len(comments)} comments")
-    log.info(f"{len(subreddits)} subreddits")
     
-    posts_df = pd.DataFrame(posts).set_index('zen_post_id')
-    subreddits_df = pd.DataFrame(subreddits.values()).set_index('zen_subreddit_id')
-    accounts_df = pd.DataFrame(accounts.values()).set_index('zen_account_id')
-    accounts_df['id'] = accounts_df.id
-    comments_df = pd.DataFrame(comments)
-    comments_df.index = comments_df.index + mydb.get_next_id('comments')
-    comments_df.index.name = 'zen_comment_id'
+    data_dicts = {'subreddits':subreddits,
+                  'accounts': accounts,
+                  'posts': posts,
+                  'comments': comments}
+    
+    dataframes = {}
+    for schema in schemas:
+        data = data_dicts[schema.name]
+        log.info(f" {len(data)} {schema}")
+        schema_sing = schema.name[:-1]
+        detail_id = f'zen_{schema_sing}_detail_id'
+        dirty_df = pd.DataFrame(data).set_index(detail_id)
         
-    posts_frames, post_objects = clean_and_normalize(posts_df, 'posts')
-    comments_frames, comment_objects = clean_and_normalize(comments_df, 'comments')
-    subreddits_frames, subreddit_objects = clean_and_normalize(subreddits_df, 'subreddits')
-    accounts_frames, account_objects = clean_and_normalize(accounts_df, 'accounts')
-
-    
-    all_frames = {'subreddits': subreddits_frames,
-                  'accounts': accounts_frames,
-                  'posts' : posts_frames, 
-                  'comments': comments_frames
-    }
-    
-    for schema, item_frames in all_frames.items():
-        for table, df in item_frames.items():
-            target_cols = mydb.get_target_columns(schema, table)
-            cols_to_drop = set(df.columns).difference(target_cols)
-            if len(cols_to_drop):
-                cols_to_drop = '\n'.join(cols_to_drop)
-                log.info(f"Dropping from {table}:\n {cols_to_drop}")
-            log.info("Writing" + table)
-            df['zen_modified_at'] = datetime.now()
-            df.drop(columns = cols_to_drop)\
-                .to_sql(name = table,
-                        schema = schema,
-                        con = environ['MAIN_MEDIA_DATABASE'], 
-                        if_exists = 'append', # DO NOT CHANGE THIS
-                        index = True)
-            log.info("Success \n")
-    
+        cleaned_frames, _ = clean_and_normalize(dirty_df, schema.name)
+        
+        target_sources = [(x,x) for x in cleaned_frames.keys()]\
+                            + [(schema_sing + '_versions', schema.name),
+                               (schema_sing + '_details', schema.name)]
+        
+        is_append = schema.writemode == WriteMode.append
+            
+        all_required_columns = []
+        for target, source in target_sources:
+            if not (target == schema.name and is_append):
+                df = cleaned_frames[source].reset_index()
+                required_columns = mydb.get_target_columns(schema.name, target)
+                all_required_columns += required_columns
+                cols_to_drop = set(df.columns).difference(required_columns)
+                df = df.drop(columns = cols_to_drop)
+            
+                
+                ## remove from here...
+                final_target_columns = mydb.get_target_columns(schema.name, target)
+                cols_to_drop = set(df.columns).difference(final_target_columns)
+                if len(cols_to_drop):
+                    cols_to_drop_text = '\n'.join(cols_to_drop)
+                    log.info(f"Dropping from {target}:\n {cols_to_drop_text}")
+                log.info(" Writing " + target)
+                ## ...to here when breaking up into details, versions, and main
+                ## Possibly keep a log statement indicating the 
+                ## columns that were dropped
+                
+                df.drop(columns = cols_to_drop)\
+                    .to_sql(name = target,
+                            schema = schema.name,
+                            con = environ['MAIN_MEDIA_DATABASE'], 
+                            if_exists = 'append', # DO NOT CHANGE THIS
+                            index = False)
+                log.info(" Success \n")
+        
+            # this doesn't account for tables that snowflake off of details like 
+            # gildings and awardings
+            no_home = set(cleaned_frames[schema.name].columns).difference(all_required_columns)
+            if len(no_home):
+                log.info(f" The following columns don't belong in {schema.name}:\n {no_home}")
+                
     completed = completed + post_batch_size
     
     

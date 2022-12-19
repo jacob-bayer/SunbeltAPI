@@ -1,6 +1,48 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
+import logging
+from mydatabasemodule import database_helpers as mydb
+
+log = logging.getLogger("CLEANER")
+
+def append_praw_object_vars_to_list(praw_object, list_to_append):
+    praw_class_to_schema = {
+                 'Submission' : 'posts',
+                 'Comment'    : 'comments',
+                 'Subreddit'  : 'subreddits',
+                 'Redditor'   : 'accounts'
+                 }
+    
+    input_class_name = praw_object.__class__.__name__
+    
+    schema_name = praw_class_to_schema[input_class_name]
+    
+    unique_reddit_id = praw_object.fullname
+    
+    zen_ids = mydb.get_id_params(
+                    unique_reddit_id, schema_name, 
+                    existing_id_collection = list_to_append)
+    
+
+    obj_vars = vars(praw_object)
+    # everything has a full name, but for some reason the Redditor
+    # object does not return the full name in the vars
+    obj_vars['unique_reddit_id'] = unique_reddit_id
+    
+    obj_vars.update(zen_ids)
+    
+    list_to_append.append(obj_vars)
+
+def has_valid_praw_author(praw_object_with_author):
+    valid = False
+    if praw_object_with_author.author:
+        # TODO: Add suspended accounts to dwh
+        _ = praw_object_with_author.author._fetch()
+        if not praw_object_with_author.author.__dict__.get('is_suspended'):
+            valid = True
+            
+    return valid
 
 def json_normalize_with_id(df):
     newdf = pd.json_normalize(df).set_index(df.index).dropna(how='all')
@@ -32,7 +74,7 @@ def clean_and_sort(df):
     Removes columns whose values are python objects and returns a 
     dictionary of dataframes
     """
-    print('Cleaning and sorting')
+    log.info('Cleaning and sorting')
     id_col = df.index.name or ''
     if 'id' in id_col:
         df = df.reset_index()
@@ -48,13 +90,22 @@ def clean_and_sort(df):
     df.columns = [x.replace('.','_') for x in df.columns]
     
     # The ID column is a repetition of data available in an object's full name
-    df.drop(columns='id', inplace=True)
+    if 'id' in df.columns:
+        df.drop(columns='id', inplace=True)
     # Create dictionary of column names and first real values
     cols_dict = {}
     for col in df:
         idx = df[col].first_valid_index()
         cols_dict.update({col: df[col].iloc[idx or 0]})
     del cols_dict[id_col]
+    
+# =============================================================================
+#     # Misc stuff
+#     convert_to_bool = ['gilded','edited']
+#     for col in convert_to_bool:
+#         if col in df.columns:
+#             df[col] = df[col].astype(bool)
+# =============================================================================
     
     # Cols to rename to reddit_obj_id
     fullnamekeys = {'t1_' : 'comment',
@@ -68,12 +119,20 @@ def clean_and_sort(df):
         for col, value in cols_dict.items():
             if isinstance(value, str) and value.startswith(key):
                 if 'parent' in col:
-                    rename_dict[col] = 'reddit_parent_id'
+                    rename_col = 'reddit_parent_id'
                 else:
-                    rename_dict[col] = f'reddit_{obj_name}_id'
+                    rename_col = f'reddit_{obj_name}_id'
+                    
+                if rename_col not in rename_dict.values():
+                    rename_dict[col] = rename_col
+                    
     for key, value in rename_dict.items():
-        cols_dict[value] = cols_dict[key]
-        del cols_dict[key]
+        # This adds the columns to be renamed to the cols_dict so that
+        # they remain in the dataframe due to their presence in the cols_dict
+        # keys
+        if not cols_dict.get(value):
+            cols_dict[value] = cols_dict[key]
+            del cols_dict[key]
                 
     df = df.rename(columns=rename_dict)
     
@@ -84,7 +143,7 @@ def clean_and_sort(df):
     keep_cols = [id_col]
     for col, value in cols_dict.items():
         is_iterable = hasattr(value, '__iter__') and not isinstance(value, str)
-        is_class = hasattr(value, '__module__')
+        is_class = hasattr(value, '__module__') and not isinstance(value, pd.Timestamp)
         if is_class:
             class_cols.append(col)
         elif is_iterable:
@@ -105,9 +164,9 @@ def normalize_iterables(df):
     """
     
     final_dict = {}
-    for table, data in df.iteritems():
+    for table, data in df.items():
         if table == 'gildings':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             gildings = json_normalize_with_id(data)
             gildings = gildings.melt(value_vars = gildings.columns, 
                                      var_name = 'reddit_gid', 
@@ -117,18 +176,19 @@ def normalize_iterables(df):
             final_dict['gildings'] = gildings
                         
         if table == 'all_awardings':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             data = data[data.map(lambda x: len(x) > 0)]
-            all_awardings = pd_json_normalize_list_of_dicts(data)
-            # I don't care about the iterables they are stupid for this one
-            all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
-            keepcols = [x for x in all_awardings.columns 
-                       if 'tiers_by_required_awardings' not in x]
-            all_awardings = all_awardings[keepcols]
-            final_dict['all_awardings'] = all_awardings
+            if len(data):
+                all_awardings = pd_json_normalize_list_of_dicts(data)
+                # I don't care about the iterables they are stupid for this one
+                all_awardings = clean_and_sort(all_awardings)['cleaned_dataframe']
+                keepcols = [x for x in all_awardings.columns 
+                           if 'tiers_by_required_awardings' not in x]
+                all_awardings = all_awardings[keepcols]
+                final_dict['all_awardings'] = all_awardings
             
         if table == 'previews':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             previews = json_normalize_with_id(data)
             previews = clean_and_sort(previews)
             images = pd_json_normalize_list_of_dicts(previews['iterables']['images'])
@@ -138,13 +198,13 @@ def normalize_iterables(df):
             final_dict['previews'] = pd.concat([previews,images], axis=1)
             
         if table == 'media':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['media'] = json_normalize_with_id(data)
         if table == 'media_embed':
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['media_embed'] = json_normalize_with_id(data)
         if table == 'secure_media': 
-            print('Iterating', table)
+            log.info('Iterating ' + table)
             final_dict['secure_media'] = json_normalize_with_id(data)
         
     return final_dict
