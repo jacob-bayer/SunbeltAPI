@@ -59,7 +59,6 @@ CREATE INDEX ix_posts_post_versions ON posts.post_versions USING btree (zen_post
 -- DROP TABLE posts.post_details;
 CREATE TABLE posts.post_details (
 	zen_post_detail_id int8 NOT NULL PRIMARY KEY REFERENCES posts.post_versions(zen_post_detail_id),
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	gilded int8 NULL,
 	selftext text NULL,

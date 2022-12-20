@@ -9,6 +9,8 @@ import logging
 log = logging.getLogger("ZEN-HELPER")
 engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
 
+def difference_in_existing(df, schema_name, target_table_name):
+    return True
 
 def get_next_id(schema_name, table_name):
     object_name = table_name[:-1] if table_name[-1] == 's' else table_name
@@ -19,6 +21,9 @@ def get_next_id(schema_name, table_name):
 
 def get_id_params(object_id, object_name,
                             existing_id_collection = None):
+    
+    if isinstance(existing_id_collection, dict):
+        existing_id_collection = list(existing_id_collection.values())
 
     if not object_id.startswith('t'):
         raise Exception("Object id must start with t. \n Try using 'fullname' attribute.")

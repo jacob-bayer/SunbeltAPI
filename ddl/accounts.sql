@@ -33,7 +33,6 @@ CREATE INDEX ix_accounts_account_versions ON accounts.account_versions USING btr
  */
 CREATE TABLE accounts.account_details (
 	zen_account_detail_id int8 NOT NULL PRIMARY KEY REFERENCES accounts.account_versions(zen_account_detail_id),
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	comment_karma int8 NULL,
 	link_karma int8 NULL,

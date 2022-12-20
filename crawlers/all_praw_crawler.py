@@ -9,7 +9,7 @@ import pandas as pd
 from mydatabasemodule.praw_output_cleaner import (
                         clean_and_normalize, 
                         has_valid_praw_author,
-                        append_praw_object_vars_to_list
+                        set_default_zen_vars
                         )
 
 import mydatabasemodule.database_helpers as mydb
@@ -82,12 +82,10 @@ completed = 0
 start_time = datetime.now()
 params = {}
 while completed < total_posts_to_get:
-    seen_subreddits = []
-    subreddits = []
-    seen_accounts = []
-    accounts = []
-    comments = []
-    posts = []
+    subreddits = {}
+    accounts = {}
+    comments = {}
+    posts = {}
     log.info(f' Reading {post_batch_size} posts')
     api_query = reddit.subreddit(subs_to_read)\
                       .top(limit = post_batch_size, # hot not top
@@ -95,40 +93,45 @@ while completed < total_posts_to_get:
                            params = params)
                       
 
-    for post in api_query:
-        if post.subreddit.fullname not in seen_subreddits:
-            append_praw_object_vars_to_list(post.subreddit, subreddits)
-            seen_subreddits.append(post.subreddit.fullname)
-            
-        append_praw_object_vars_to_list(post, posts)
-        posts[-1]['zen_subreddit_id'] = subreddits[-1]['zen_subreddit_id']
+    for praw_post in api_query:
+        set_default_zen_vars(subreddits, praw_post.subreddit)
+        set_default_zen_vars(posts, praw_post)
         
-        if has_valid_praw_author(post):
-            if post.author.fullname not in seen_accounts:
-                append_praw_object_vars_to_list(post.author, accounts)
-                seen_accounts.append(post.author.fullname)
-                for field in author_transfer_to_parent:
-                    posts[-1]['author_' + field] = accounts[-1].pop(field, None)
-                    posts[-1]['zen_account_id'] = accounts[-1]['zen_account_id']
+        zen_subreddit = subreddits[praw_post.subreddit.fullname]
+        zen_post = posts[praw_post.fullname]
+        zen_post['zen_subreddit_id'] = zen_subreddit['zen_subreddit_id']
+        
+        if has_valid_praw_author(praw_post):
+            set_default_zen_vars(accounts, praw_post.author)
+            zen_author = accounts[praw_post.author.fullname]
+            
+            for field in author_transfer_to_parent:
+                zen_post['author_' + field] = zen_author.pop(field, None)
+                zen_post['zen_account_id'] = zen_author['zen_account_id']
 
-        _ = post.comments.replace_more(limit = None)
-        all_comments = post.comments.list()
+        _ = praw_post.comments.replace_more(limit = None)
+        all_comments = praw_post.comments.list()
         log.info(f" Fetching {len(all_comments)} comments.")
-        for comment in all_comments:
-            append_praw_object_vars_to_list(comment, comments)
+        for praw_comment in all_comments:
+            set_default_zen_vars(comments, praw_comment)
+            zen_comment = comments[praw_comment.fullname]
             
-            if has_valid_praw_author(comment):
-                append_praw_object_vars_to_list(comment.author, accounts)
+            if has_valid_praw_author(praw_comment):
+                set_default_zen_vars(accounts, praw_comment.author)
+                zen_author = accounts[praw_comment.author.fullname]
+                
                 for field in author_transfer_to_parent:
-                    comments[-1]['author_' + field] = accounts[-1].pop(field, None)
+                    zen_comment['author_' + field] = zen_author.pop(field, None)
             
-            comments[-1]['zen_post_id'] = posts[-1]['zen_post_id']
-            comments[-1]['zen_subreddit_id'] = subreddits[-1]['zen_subreddit_id']
+                zen_comment['zen_account_id'] = zen_author['zen_account_id']
+                
+            zen_comment['zen_post_id'] = zen_post['zen_post_id']
+            zen_comment['zen_subreddit_id'] = zen_post['zen_subreddit_id']
 
     
     ##############
     batch_reading_time = datetime.now() - start_time
-    params = {'after': post.name}
+    params = {'after': praw_post.fullname}
     
     data_dicts = {'subreddits':subreddits,
                   'accounts': accounts,
@@ -137,7 +140,7 @@ while completed < total_posts_to_get:
     
     dataframes = {}
     for schema in schemas:
-        data = data_dicts[schema.name]
+        data = data_dicts[schema.name].values()
         log.info(f" {len(data)} {schema}")
         schema_sing = schema.name[:-1]
         detail_id = f'zen_{schema_sing}_detail_id'
@@ -172,12 +175,13 @@ while completed < total_posts_to_get:
                 ## Possibly keep a log statement indicating the 
                 ## columns that were dropped
                 
-                df.drop(columns = cols_to_drop)\
-                    .to_sql(name = target,
-                            schema = schema.name,
-                            con = environ['MAIN_MEDIA_DATABASE'], 
-                            if_exists = 'append', # DO NOT CHANGE THIS
-                            index = False)
+                if mydb.difference_in_existing(df, schema.name, target):
+                    df.drop(columns = cols_to_drop)\
+                        .to_sql(name = target,
+                                schema = schema.name,
+                                con = environ['MAIN_MEDIA_DATABASE'], 
+                                if_exists = 'append', # DO NOT CHANGE THIS
+                                index = False)
                 log.info(" Success \n")
         
             # this doesn't account for tables that snowflake off of details like 

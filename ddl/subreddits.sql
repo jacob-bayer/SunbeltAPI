@@ -38,7 +38,6 @@ CREATE INDEX ix_subreddits_subreddit_versions ON subreddits.subreddit_versions U
  */
 CREATE TABLE subreddits.subreddit_details (
 	zen_subreddit_detail_id int8 NOT NULL PRIMARY KEY REFERENCES subreddits.subreddit_versions(zen_subreddit_detail_id),
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	active_user_count int8 NULL,
 	accounts_active int8 NULL,

@@ -6,33 +6,39 @@ from mydatabasemodule import database_helpers as mydb
 
 log = logging.getLogger("CLEANER")
 
-def append_praw_object_vars_to_list(praw_object, list_to_append):
-    praw_class_to_schema = {
-                 'Submission' : 'posts',
-                 'Comment'    : 'comments',
-                 'Subreddit'  : 'subreddits',
-                 'Redditor'   : 'accounts'
-                 }
     
-    input_class_name = praw_object.__class__.__name__
-    
-    schema_name = praw_class_to_schema[input_class_name]
-    
+def set_default_zen_vars(existing_id_collection, praw_object):
     unique_reddit_id = praw_object.fullname
     
-    zen_ids = mydb.get_id_params(
-                    unique_reddit_id, schema_name, 
-                    existing_id_collection = list_to_append)
+    if unique_reddit_id not in existing_id_collection:
+        praw_class_to_schema = {
+                     'Submission' : 'posts',
+                     'Comment'    : 'comments',
+                     'Subreddit'  : 'subreddits',
+                     'Redditor'   : 'accounts'
+                     }
+        
+        input_class_name = praw_object.__class__.__name__
+        
+        schema_name = praw_class_to_schema[input_class_name]
+        
     
-
-    obj_vars = vars(praw_object)
-    # everything has a full name, but for some reason the Redditor
-    # object does not return the full name in the vars
-    obj_vars['unique_reddit_id'] = unique_reddit_id
+        
+        zen_ids = mydb.get_id_params(
+                        unique_reddit_id, schema_name, 
+                        existing_id_collection = existing_id_collection)
+        
     
-    obj_vars.update(zen_ids)
+        obj_vars = vars(praw_object)
+        # everything has a full name, but for some reason the Redditor
+        # object does not return the full name in the vars
+        obj_vars['unique_reddit_id'] = unique_reddit_id
+        
+        obj_vars.update(zen_ids)
+        
+        # set default ensures there are no duplicates
+        existing_id_collection.setdefault(unique_reddit_id, obj_vars)
     
-    list_to_append.append(obj_vars)
 
 def has_valid_praw_author(praw_object_with_author):
     valid = False

@@ -41,7 +41,6 @@ CREATE INDEX ix_comments_comment_versions ON comments.comment_versions USING btr
 
 CREATE TABLE COMMENTS.comment_details (
 	zen_comment_detail_id int8 NOT NULL PRIMARY KEY REFERENCES comments.comment_versions(zen_comment_detail_id),
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	controversiality int8 NULL,
 	ups int8 NULL,
@@ -106,7 +105,6 @@ CREATE INDEX ix_comments_comment_details ON comments.comment_details USING btree
 CREATE TABLE "comments".all_awardings (
 	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	zen_comment_detail_id int8 NOT NULL REFERENCES comments.comment_details(zen_comment_detail_id),
-	zen_modified_at timestamp NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
 	giver_coin_reward text NULL,
 	is_new bool NULL,
