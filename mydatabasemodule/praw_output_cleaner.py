@@ -5,7 +5,6 @@ import logging
 from mydatabasemodule import database_helpers as mydb
 
 log = logging.getLogger("CLEANER")
-
     
 def set_default_zen_vars(existing_id_collection, praw_object):
     unique_reddit_id = praw_object.fullname
@@ -21,8 +20,6 @@ def set_default_zen_vars(existing_id_collection, praw_object):
         input_class_name = praw_object.__class__.__name__
         
         schema_name = praw_class_to_schema[input_class_name]
-        
-    
         
         zen_ids = mydb.get_id_params(
                         unique_reddit_id, schema_name, 
@@ -105,13 +102,11 @@ def clean_and_sort(df):
         cols_dict.update({col: df[col].iloc[idx or 0]})
     del cols_dict[id_col]
     
-# =============================================================================
-#     # Misc stuff
-#     convert_to_bool = ['gilded','edited']
-#     for col in convert_to_bool:
-#         if col in df.columns:
-#             df[col] = df[col].astype(bool)
-# =============================================================================
+    # Misc stuff
+    int_bools = ['gilded','edited']
+    for col in int_bools:
+        if col in df.columns:
+            df[col] = df[col].astype(int)
     
     # Cols to rename to reddit_obj_id
     fullnamekeys = {'t1_' : 'comment',

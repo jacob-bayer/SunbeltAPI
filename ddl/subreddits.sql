@@ -121,16 +121,18 @@ CREATE INDEX ix_subreddits_subreddit_details ON subreddits.subreddit_details USI
  * where the max detail id is not the max version id. If that happens,
  * this needs to change.
  */
-CREATE VIEW subreddits.most_recent_subreddit_details AS (
-SELECT 
+CREATE VIEW subreddits.most_recent_details AS (
+SELECT DISTINCT ON (zen_subreddit_id)
 reddit_subreddit_id AS reddit_lookup_id,
 zen_subreddit_id, 
-MAX(zen_subreddit_version_id) AS zen_subreddit_version_id,
-MAX(zen_subreddit_detail_id) AS zen_subreddit_detail_id
+zen_subreddit_version_id,
+details.*
 FROM subreddits.subreddit_versions
 JOIN subreddits.subreddits USING (zen_subreddit_id)
-GROUP BY zen_subreddit_id, reddit_subreddit_id
+JOIN subreddits.subreddit_details details USING (zen_subreddit_detail_id)
+ORDER BY zen_subreddit_id, zen_subreddit_version_id DESC
 )
+
 
 
 

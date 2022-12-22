@@ -78,7 +78,7 @@ CREATE TABLE posts.post_details (
 	total_awards_received int8 NULL,
 	score int8 NULL,
 	author_premium bool NULL,
-	edited text NULL,
+	edited int8 NULL,
 	saved bool NULL,
 	mod_reason_title text NULL,
 	clicked bool NULL,
@@ -281,16 +281,18 @@ CREATE INDEX ix_posts_secure_media_zen_secure_media_id ON posts.secure_media USI
  * where the max detail id is not the max version id. If that happens,
  * this needs to change.
  */
-CREATE VIEW posts.most_recent_post_details AS (
-SELECT 
+CREATE VIEW posts.most_recent_details AS (
+SELECT DISTINCT ON (zen_post_id)
 reddit_post_id AS reddit_lookup_id,
 zen_post_id, 
-MAX(zen_post_version_id) AS zen_post_version_id,
-MAX(zen_post_detail_id) AS zen_post_detail_id
-FROM posts.posts
-LEFT JOIN posts.post_versions USING (zen_post_id)
-GROUP BY zen_post_id, reddit_post_id
+zen_post_version_id,
+details.*
+FROM posts.post_versions
+JOIN posts.posts USING (zen_post_id)
+JOIN posts.post_details details USING (zen_post_detail_id)
+ORDER BY zen_post_id, zen_post_version_id DESC
 )
+
 
 
 

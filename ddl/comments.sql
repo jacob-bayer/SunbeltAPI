@@ -47,7 +47,7 @@ CREATE TABLE COMMENTS.comment_details (
 	downs int8 NULL,
 	score int8 NULL,
 	body text NULL,
-	edited text NULL,
+	edited int8 NULL,
 	author_cakeday bool NULL,
 	approved_at_utc text NULL,
 	author_has_subscribed bool NULL,
@@ -159,16 +159,18 @@ CREATE INDEX ix_comments_gildings_zen_gilding_id ON comments.gildings USING btre
  * where the max detail id is not the max version id. If that happens,
  * this needs to change.
  */
-CREATE VIEW COMMENTs.most_recent_comment_details AS (
-SELECT 
+CREATE VIEW comments.most_recent_details AS (
+SELECT DISTINCT ON (zen_comment_id)
 reddit_comment_id AS reddit_lookup_id,
 zen_comment_id, 
-MAX(zen_comment_version_id) AS zen_comment_version_id,
-MAX(zen_comment_detail_id) AS zen_comment_detail_id
+zen_comment_version_id,
+details.*
 FROM comments.comment_versions
 JOIN comments.comments USING (zen_comment_id)
-GROUP BY zen_comment_id, reddit_comment_id
+JOIN comments.comment_details details USING (zen_comment_detail_id)
+ORDER BY zen_comment_id, zen_comment_version_id DESC
 )
+
 
 
 

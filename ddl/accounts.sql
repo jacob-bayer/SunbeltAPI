@@ -59,14 +59,15 @@ CREATE INDEX ix_accounts_account_details ON accounts.account_details USING btree
  * where the max detail id is not the max version id. If that happens,
  * this needs to change.
  */
-CREATE VIEW accounts.most_recent_account_details AS (
-SELECT 
+CREATE VIEW accounts.most_recent_details AS (
+SELECT DISTINCT ON (zen_account_id)
 reddit_account_id AS reddit_lookup_id,
 zen_account_id, 
-MAX(zen_account_version_id) AS zen_account_version_id,
-MAX(zen_account_detail_id) AS zen_account_detail_id
+zen_account_version_id,
+details.*
 FROM accounts.account_versions
 JOIN accounts.accounts USING (zen_account_id)
-GROUP BY zen_account_id, reddit_account_id
+JOIN accounts.account_details details USING (zen_account_detail_id)
+ORDER BY zen_account_id, zen_account_version_id DESC
 )
 

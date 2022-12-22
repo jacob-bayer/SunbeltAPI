@@ -43,7 +43,9 @@ posts_frames, _ = clean_and_normalize(posts_df, 'posts')
 
 df = posts_frames['media']
 
-not_dup_cols = [x for x in df.columns if not all(df[x].duplicated(keep=False))]
+examine = df.copy()
+
+not_dup_cols = [x for x in test.columns if not all(test[x].duplicated(keep=False))]
 
 
 

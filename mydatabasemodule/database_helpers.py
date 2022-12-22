@@ -9,8 +9,11 @@ import logging
 log = logging.getLogger("ZEN-HELPER")
 engine = create_engine(environ['MAIN_MEDIA_DATABASE'])
 
-def difference_in_existing(df, schema_name, target_table_name):
-    return True
+
+def most_recent_details(schema):
+    QUERY = f"SELECT * FROM {schema}.most_recent_details;"
+    log.debug(" QUERY:" + QUERY)
+    return pd.read_sql(QUERY, engine)
 
 def get_next_id(schema_name, table_name):
     object_name = table_name[:-1] if table_name[-1] == 's' else table_name
@@ -38,7 +41,7 @@ def get_id_params(object_id, object_name,
     try:
         QUERY = f"""
             SELECT {obj_id_fields}
-            FROM {object_name}s.most_recent_{object_name}_details
+            FROM {object_name}s.most_recent_details
             WHERE reddit_lookup_id = '{object_id}';
             """
         log.debug(" QUERY:" + QUERY)

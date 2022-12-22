@@ -44,6 +44,8 @@ log = logging.getLogger('CRAWLER')
 
 WriteMode = Enum('WriteMode', ['overwrite','append'])
 
+main_write_mode = WriteMode.append
+
 @dataclass
 class SchemaConfig:
     name: str
@@ -51,10 +53,10 @@ class SchemaConfig:
     frames: dict = None
         
 # This is the hierarchy required
-schemas = [SchemaConfig('subreddits', WriteMode.append),
-           SchemaConfig('accounts', WriteMode.append),
-           SchemaConfig('posts', WriteMode.append),
-           SchemaConfig('comments', WriteMode.append)]
+schemas = [SchemaConfig('subreddits', main_write_mode),
+           SchemaConfig('accounts', main_write_mode),
+           SchemaConfig('posts', main_write_mode),
+           SchemaConfig('comments', main_write_mode)]
 
 load_dotenv()
 
@@ -140,56 +142,100 @@ while completed < total_posts_to_get:
     
     dataframes = {}
     for schema in schemas:
+        all_required_columns = []
         data = data_dicts[schema.name].values()
-        log.info(f" {len(data)} {schema}")
+        log.info(f" {len(data)} {schema.name}")
         schema_sing = schema.name[:-1]
+        main_id = f'zen_{schema_sing}_id'
+        reddit_id = f'reddit_{schema_sing}_id'
         detail_id = f'zen_{schema_sing}_detail_id'
+        version_id = f'zen_{schema_sing}_version_id'
         dirty_df = pd.DataFrame(data).set_index(detail_id)
         
         cleaned_frames, _ = clean_and_normalize(dirty_df, schema.name)
+        
+        mrd = mydb.most_recent_details(schema.name)
+        reddit_ids = cleaned_frames[schema.name][reddit_id]
+        needs_entry = reddit_ids.apply(lambda x: x in mrd.reddit_lookup_id)
+        needs_entry_indexes = cleaned_frames[schema.name][needs_entry][main_id].reset_index()
         
         target_sources = [(x,x) for x in cleaned_frames.keys()]\
                             + [(schema_sing + '_versions', schema.name),
                                (schema_sing + '_details', schema.name)]
         
         is_append = schema.writemode == WriteMode.append
-            
-        all_required_columns = []
+        
+        table_columns = {}
+        # change this to parse from ddl to avoid querying the db
+        # This parsing of the ddl should also establish which tables
+        # are dependent on the details table
         for target, source in target_sources:
-            if not (target == schema.name and is_append):
-                df = cleaned_frames[source].reset_index()
-                required_columns = mydb.get_target_columns(schema.name, target)
-                all_required_columns += required_columns
-                cols_to_drop = set(df.columns).difference(required_columns)
-                df = df.drop(columns = cols_to_drop)
+            required_columns = mydb.get_target_columns(schema.name, target)
+            table_columns[target] = required_columns
+            all_required_columns += required_columns
+        
+
+        # must be sorted so that things depending on details come last
+        main_version_detail_tables = [x for x in target_sources if schema.name == x[1]]
+        details_dependent_tables = [x for x in target_sources if schema.name != x[1]]
+        target_sources = main_version_detail_tables + details_dependent_tables
+        ##
+        
+        for target, source in target_sources:
+            required_columns = table_columns[target]
+            df = cleaned_frames[source].reset_index()
+            version_1 = df[version_id] == 1
+            cols_to_drop = set(df.columns).difference(required_columns)
+            cols_to_drop.discard(main_id)
+            df.drop(columns = cols_to_drop, inplace = True)
+            df_version_1 = df[version_1]
+            df_not_version_1 = df[~version_1]
+            if is_append: 
+                
+                if target == schema.name:
+                    df = df_version_1
+                
+                if 'details' in target:
+                    seen_details = mrd[mrd[main_id].apply(lambda x: x in df_not_version_1[main_id])]
+                    drop_dupes = pd.concat([seen_details[df_not_version_1.columns],df_not_version_1])
+                    drop_dupes.drop(columns = detail_id, inplace = True)
+                    drop_dupes = drop_dupes.drop_duplicates(keep=False)
+                    zen_ids_to_write = set(drop_dupes[main_id])
+                    
+                    mask = df_not_version_1[main_id].apply(lambda x: x in zen_ids_to_write)
+                    df_not_version_1 = df_not_version_1[mask]
+                    zen_detail_ids_to_write = df_not_version_1[detail_id].to_list()
+                    
+                    df = pd.concat([df_version_1,df_not_version_1])
+                
+                if schema.name not in source:
+                    mask = df[detail_id].apply(lambda x: x in zen_detail_ids_to_write)
+                    df = df[mask]
             
-                
-                ## remove from here...
-                final_target_columns = mydb.get_target_columns(schema.name, target)
-                cols_to_drop = set(df.columns).difference(final_target_columns)
-                if len(cols_to_drop):
-                    cols_to_drop_text = '\n'.join(cols_to_drop)
-                    log.info(f"Dropping from {target}:\n {cols_to_drop_text}")
-                log.info(" Writing " + target)
-                ## ...to here when breaking up into details, versions, and main
-                ## Possibly keep a log statement indicating the 
-                ## columns that were dropped
-                
-                if mydb.difference_in_existing(df, schema.name, target):
-                    df.drop(columns = cols_to_drop)\
-                        .to_sql(name = target,
-                                schema = schema.name,
-                                con = environ['MAIN_MEDIA_DATABASE'], 
-                                if_exists = 'append', # DO NOT CHANGE THIS
-                                index = False)
-                log.info(" Success \n")
+            cols_to_drop = set(df.columns).difference(required_columns)
+            if len(cols_to_drop):
+                cols_to_drop_text = '\n'.join(cols_to_drop)
+                log.info(f"Dropping from {target}:\n {cols_to_drop_text}")
+            log.info(" Writing " + target)
+
+            
+            df.drop(columns = cols_to_drop)\
+                .to_sql(name = target,
+                        schema = schema.name,
+                        con = environ['MAIN_MEDIA_DATABASE'], 
+                        if_exists = 'append', # DO NOT CHANGE THIS
+                        index = False)
+            log.info(" Success \n")
         
             # this doesn't account for tables that snowflake off of details like 
             # gildings and awardings
-            no_home = set(cleaned_frames[schema.name].columns).difference(all_required_columns)
-            if len(no_home):
-                log.info(f" The following columns don't belong in {schema.name}:\n {no_home}")
-                
+            # This is no longer accurate. Fix to be accurate.
+# =============================================================================
+#             no_home = set(cleaned_frames[schema.name].columns).difference(all_required_columns)
+#             if len(no_home):
+#                 log.info(f" The following columns don't belong in {schema.name}:\n {no_home}")
+#                 
+# =============================================================================
     completed = completed + post_batch_size
     
     
