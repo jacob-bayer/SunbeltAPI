@@ -49,18 +49,12 @@ CREATE TABLE COMMENTS.comment_details (
 	body text NULL,
 	edited int8 NULL,
 	author_cakeday bool NULL,
-	approved_at_utc text NULL,
 	author_has_subscribed bool NULL,
 	author_is_mod bool NULL,
 	comment_type text NULL,
-	mod_reason_by text NULL,
-	banned_by text NULL,
 	author_flair_type text NULL,
 	total_awards_received int8 NULL,
 	author_flair_template_id text NULL,
-	likes text NULL,
-	saved bool NULL,
-	banned_at_utc text NULL,
 	mod_reason_title text NULL,
 	gilded int8 NULL,
 	archived bool NULL,
@@ -68,7 +62,6 @@ CREATE TABLE COMMENTS.comment_details (
 	no_follow bool NULL,
 	can_mod_post bool NULL,
 	send_replies bool NULL,
-	approved_by text NULL,
 	mod_note text NULL,
 	collapsed bool NULL,
 	top_awarded_type text NULL,
@@ -90,11 +83,9 @@ CREATE TABLE COMMENTS.comment_details (
 	report_reasons text NULL,
 	author_flair_text text NULL,
 	author_flair_background_color text NULL,
-	collapsed_because_crowd_control text NULL,
-	num_reports text NULL
+	collapsed_because_crowd_control text NULL
 );
 CREATE INDEX ix_comments_comment_details ON comments.comment_details USING btree (zen_comment_detail_id);
-
 
 -- "comments".all_awardings definition
 
