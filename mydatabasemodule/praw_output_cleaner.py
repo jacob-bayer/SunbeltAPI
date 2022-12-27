@@ -3,37 +3,104 @@
 import pandas as pd
 import logging
 from mydatabasemodule import database_helpers as mydb
+from enum import Enum
 
 log = logging.getLogger("CLEANER")
+
+class zen_kind_enum(Enum):
+    post = 1
+    comment = 2
+    subreddit = 3
+    account = 4
+
+def zen_kind(praw_object):
+    lookup_dict = {
+                 'Submission' : zen_kind_enum['post'],
+                 'Comment'    : zen_kind_enum['comment'],
+                 'Subreddit'  : zen_kind_enum['subreddit'],
+                 'Redditor'   : zen_kind_enum['account']
+                 }
     
-def set_default_zen_vars(existing_id_collection, praw_object):
+    input_class_name = praw_object.__class__.__name__
+    return lookup_dict[input_class_name]
+
+def set_zen_obj_vars(praw_object, existing_id_collection = None):
+    schema_name = zen_kind(praw_object).name + 's'
+    
+    unique_reddit_id = praw_object.fullname
+    zen_ids = mydb.get_id_params(
+                    unique_reddit_id, schema_name, 
+                    existing_id_collection = existing_id_collection)
+    
+    obj_vars = vars(praw_object)
+    # everything has a full name, but for some reason the Redditor
+    # object does not return the full name in the vars
+    obj_vars['unique_reddit_id'] = unique_reddit_id
+    
+    obj_vars.update(zen_ids)
+
+async def insert_from_dict(praw_object):
+    set_zen_obj_vars(praw_object)
+    obj_vars = vars(praw_object)
+    
+    subreddit_ids = mydb.get_id_params(praw_object.subreddit.fullname, 'subreddits')
+    obj_vars['zen_subreddit_id'] = subreddit_ids['zen_subreddit_id']
+    
+    zen_kind = zen_kind(praw_object)
+    
+    if zen_kind == zen_kind_enum['comment']:
+        post_ids = mydb.get_id_params(praw_object.submission.fullname, 'posts')
+        obj_vars['zen_post_id'] = post_ids['zen_post_id']
+    
+    df = pd.DataFrame([obj_vars]).set_index(f'zen_{zen_kind.name}_detail_id')
+    cleaned_frames, _ = clean_and_normalize(df, zen_kind.name)
+    
+def drop_dupes(mrd, df, schema, target):
+    kind = schema[:-1]
+    main_id = f'zen_{kind}_id'
+    detail_id = f'zen_{kind}_detail_id'
+    version_id = f'zen_{kind}_version_id'
+    
+    version_1 = df[detail_id].apply(lambda x: x in v1_detail_ids)
+    cols_to_drop = set(df.columns).difference(required_columns)
+    cols_to_drop.discard(main_id)
+    df.drop(columns = cols_to_drop, inplace = True)
+    df_version_1 = df[version_1]
+    df_not_version_1 = df[~version_1]
+    
+    is_append = schema.writemode
+    if is_append: 
+        
+        if target == schema.name:
+            df = df_version_1
+        
+        if 'details' in target:
+            drop_dupes(mrd, df_not_version_1)
+    
+    seen_details = mrd[mrd[main_id].apply(lambda x: x in df_not_version_1[main_id])]
+    drop_dupes = pd.concat([seen_details[df_not_version_1.columns],df_not_version_1])
+    drop_dupes.drop(columns = detail_id, inplace = True)
+    drop_dupes = drop_dupes.drop_duplicates(keep=False)
+    zen_ids_to_write = set(drop_dupes[main_id])
+    
+    mask = df_not_version_1[main_id].apply(lambda x: x in zen_ids_to_write)
+    df_not_version_1 = df_not_version_1[mask]
+    zen_detail_ids_to_write = df_not_version_1[detail_id].to_list()
+    
+    df = pd.concat([df_version_1, df_not_version_1]) 
+    
+    if schema.name not in source:
+        mask = df[detail_id].apply(lambda x: x in zen_detail_ids_to_write)
+        df = df[mask]
+
+def update_existing_object_collection(existing_id_collection, praw_object):
     unique_reddit_id = praw_object.fullname
     
     if unique_reddit_id not in existing_id_collection:
-        praw_class_to_schema = {
-                     'Submission' : 'posts',
-                     'Comment'    : 'comments',
-                     'Subreddit'  : 'subreddits',
-                     'Redditor'   : 'accounts'
-                     }
-        
-        input_class_name = praw_object.__class__.__name__
-        
-        schema_name = praw_class_to_schema[input_class_name]
-        
-        zen_ids = mydb.get_id_params(
-                        unique_reddit_id, schema_name, 
-                        existing_id_collection = existing_id_collection)
-        
-    
-        obj_vars = vars(praw_object)
-        # everything has a full name, but for some reason the Redditor
-        # object does not return the full name in the vars
-        obj_vars['unique_reddit_id'] = unique_reddit_id
-        
-        obj_vars.update(zen_ids)
+        set_zen_obj_vars(praw_object, existing_id_collection)
         
         # set default ensures there are no duplicates
+        obj_vars = vars(praw_object)
         existing_id_collection.setdefault(unique_reddit_id, obj_vars)
     
 
@@ -235,3 +302,4 @@ def clean_and_normalize(df, main_table_name):
     ready_to_write_dict.update(normalized_iterables_dict)
 
     return ready_to_write_dict, cleaned_dict['objects']
+

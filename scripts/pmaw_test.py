@@ -5,12 +5,13 @@ Created on Tue Dec 13 17:33:29 2022
 
 @author: jacob
 """
+
 from pmaw import PushshiftAPI
 
 api = PushshiftAPI()
 
 # The `search_comments` and `search_submissions` methods return generator objects
-gen = api.search_comments(subreddit='dataisbeautiful')
+gen = api.search_submissions(subreddit='all', limit = 10)
 results = list(gen)
 
 import pandas as pd

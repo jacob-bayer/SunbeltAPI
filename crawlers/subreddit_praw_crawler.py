@@ -4,11 +4,8 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-import pandas as pd
-from mydatabasemodule.praw_output_cleaner import clean_and_normalize
-import mydatabasemodule.database_helpers as mydb
+from mydatabasemodule.praw_output_cleaner import set_default_zen_vars
 from datetime import datetime
-import object_parser
 
 load_dotenv()
 
@@ -19,76 +16,11 @@ reddit = praw.Reddit(
     check_for_async = False
 )
 
-top_subs = ['AskReddit',
-             'worldnews',
-             'news',
-             'Unexpected',
-             'videos',
-             'wallstreetbets',
-             'PublicFreakout',
-             'mildlyinteresting',
-             'WhitePeopleTwitter',
-             'funny',
-             'politics',
-             'Damnthatsinteresting',
-             'pics',
-             'MadeMeSmile',
-             'facepalm',
-             'movies',
-             'todayilearned',
-             'technology',
-             'nextfuckinglevel',
-             'gaming',
-             'memes',
-             'IdiotsInCars',
-             'interestingasfuck',
-             'tifu',
-             'dankmemes',
-             'aww',
-             'science',
-             'Wellthatsucks',
-             'LifeProTips',
-             'WatchPeopleDieInside',
-             'oddlysatisfying',
-             'teenagers',
-             'wholesomememes',
-             'comics',
-             'PrequelMemes',
-             'Futurology',
-             'dataisbeautiful',
-             'assholedesign',
-             'LeopardsAteMyFace',
-             'Showerthoughts',
-             'DunderMifflin',
-             'EarthPorn',
-             'books',
-             'space',
-             'trashy',
-             'me_irl',
-             'awfuleverything',
-             'gifs',
-             'IAmA',
-             'Music',
-             'rickandmorty',
-             'nottheonion',
-             'freefolk',
-             'BikiniBottomTwitter',
-             'MurderedByWords',
-             'JusticeServed',
-             'PewdiepieSubmissions',
-             'announcements',
-             'StarWarsBattlefront',
-             'thanosdidnothingwrong',
-             'MemeEconomy']
-
-subs_to_read = '+'.join(top_subs)
-
-# Just for testing
 subs_to_read = ['dataisbeautiful',
-             'assholedesign',
-             'LeopardsAteMyFace']
+                 'assholedesign',
+                 'LeopardsAteMyFace']
 
-subs_to_read = '+'.join(top_subs)
+subs_to_read = '+'.join(subs_to_read)
 subreddit = reddit.subreddit(subs_to_read)
 
 # Solution comes from here
@@ -98,21 +30,19 @@ subreddit = reddit.subreddit(subs_to_read)
 comment_stream = subreddit.stream.comments(pause_after=-1, skip_existing = True)
 submission_stream = subreddit.stream.submissions(pause_after=-1, skip_existing = True)
 start_time = datetime.now()
-posts = 0
-comments = 0
 while True:
     for comment in comment_stream:
         print("Comment stream")
         if comment is None:
             break
-        comments += 1
+        comment
         print("New comment:", comment.permalink)
     for post in submission_stream:
         print("Post stream")
         if post is None:
             break
         print("New post:", post.permalink)
-        posts += 1
+        posts += post
         #object_parser.insert_post(post)
         
         
