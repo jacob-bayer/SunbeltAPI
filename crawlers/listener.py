@@ -4,10 +4,20 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-from mydatabasemodule.praw_output_cleaner import set_default_zen_vars
+from mydatabasemodule.praw_output_cleaner import (
+                        SchemaConfig,
+                        WriteMode,
+                        async_insert_praw_object
+                        )
 from datetime import datetime
+import asyncio
 
 load_dotenv()
+
+schemas = [SchemaConfig('subreddits', WriteMode.append),
+           SchemaConfig('accounts', WriteMode.append),
+           SchemaConfig('posts', WriteMode.append),
+           SchemaConfig('comments', WriteMode.append)]
 
 reddit = praw.Reddit(
     client_id = environ.get('REDDIT_CLIENT_ID'),
@@ -30,27 +40,26 @@ subreddit = reddit.subreddit(subs_to_read)
 comment_stream = subreddit.stream.comments(pause_after=-1, skip_existing = True)
 submission_stream = subreddit.stream.submissions(pause_after=-1, skip_existing = True)
 start_time = datetime.now()
-while True:
-    for comment in comment_stream:
-        print("Comment stream")
-        if comment is None:
-            break
-        comment
-        print("New comment:", comment.permalink)
-    for post in submission_stream:
-        print("Post stream")
-        if post is None:
-            break
-        print("New post:", post.permalink)
-        posts += post
-        #object_parser.insert_post(post)
-        
-        
-total_time = datetime.now() - start_time
 
-minutes_elapsed = total_time.seconds/60
-print(posts/minutes_elapsed, 'posts per minute')
-print(comments/minutes_elapsed, 'comments per minute')
+async def listen_to(stream):
+    print("Switching stream")
+    for praw_object in stream:
+        if praw_object is not None:
+            print(praw_object.fullname)
+            await async_insert_praw_object(praw_object)
+            print("Moving on from await call")
+        break
+        
+async def listen_to_all():
+    task1 = asyncio.create_task(listen_to(comment_stream))
+    task2 = asyncio.create_task(listen_to(submission_stream))
+    await asyncio.gather(task1, task2)
+
+
+while True:
+    asyncio.run(listen_to_all())
+
+        
 
 
 
