@@ -8,6 +8,7 @@ from ariadne import load_schema_from_path, make_executable_schema, \
 from ariadne.constants import PLAYGROUND_HTML
 from flask import request, jsonify
 from api.queries import resolve_posts, resolve_post
+import os
 
 query = ObjectType("Query")
 

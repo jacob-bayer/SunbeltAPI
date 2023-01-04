@@ -3,21 +3,15 @@ schema {
 }
 
 type Post {
-        post_id: ID!
+        zen_post_id: ID!
         reddit_post_id: String
         reddit_account_id: String
         reddit_subreddit_id: String
-        subreddit_name_prefixed: String
         title: String
-        gilded: Int
-        selftext: String
-        approved_at_utc: String
-        downs: Int
-        subreddit_type: String
-        ups: Int
-        upvote_ratio: Float
         permalink: String
         }
+        
+
 
 
 type PostResult {
@@ -34,7 +28,7 @@ type PostsResult {
 
 type Query {
     posts: PostsResult!
-    post(postPost_id: ID!): PostResult!
+    post(postZen_post_id: ID!): PostResult!
 }
 
 type DeletePostResult {

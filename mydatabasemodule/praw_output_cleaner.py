@@ -105,7 +105,7 @@ def clean_and_sort(df):
     Removes columns whose values are python objects and returns a 
     dictionary of dataframes
     """
-    log.info('Cleaning and sorting')
+    log.debug('Cleaning and sorting')
     id_col = df.index.name or ''
     if 'id' in id_col:
         df = df.reset_index()
@@ -195,7 +195,7 @@ def normalize_iterables(df):
     final_dict = {}
     for table, data in df.items():
         if table == 'gildings':
-            log.info('Iterating ' + table)
+            log.debug('Iterating ' + table)
             gildings = json_normalize_with_id(data)
             gildings = gildings.melt(value_vars = gildings.columns, 
                                      var_name = 'reddit_gid', 
@@ -205,7 +205,7 @@ def normalize_iterables(df):
             final_dict['gildings'] = gildings
                         
         if table == 'all_awardings':
-            log.info('Iterating ' + table)
+            log.debug('Iterating ' + table)
             data = data[data.map(lambda x: len(x) > 0)]
             if len(data):
                 all_awardings = pd_json_normalize_list_of_dicts(data)
@@ -214,10 +214,10 @@ def normalize_iterables(df):
                 keepcols = [x for x in all_awardings.columns 
                            if 'tiers_by_required_awardings' not in x]
                 all_awardings = all_awardings[keepcols]
-                final_dict['all_awardings'] = all_awardings
+                final_dict['awardings'] = all_awardings
             
         if table == 'previews':
-            log.info('Iterating ' + table)
+            log.debug('Iterating ' + table)
             previews = json_normalize_with_id(data)
             previews = clean_and_sort(previews)
             images = pd_json_normalize_list_of_dicts(previews['iterables']['images'])
@@ -227,13 +227,13 @@ def normalize_iterables(df):
             final_dict['previews'] = pd.concat([previews,images], axis=1)
             
         if table == 'media':
-            log.info('Iterating ' + table)
-            final_dict['media'] = json_normalize_with_id(data)
+            log.debug('Iterating ' + table)
+            final_dict['media'] = json_normalize_with_id(data).rename(columns={'type':'media_type'})
         if table == 'media_embed':
-            log.info('Iterating ' + table)
+            log.debug('Iterating ' + table)
             final_dict['media_embed'] = json_normalize_with_id(data)
         if table == 'secure_media': 
-            log.info('Iterating ' + table)
+            log.debug('Iterating ' + table)
             final_dict['secure_media'] = json_normalize_with_id(data)
         
     return final_dict
@@ -272,24 +272,16 @@ async def async_insert_praw_object(praw_object):
                                   praw_object)
 
 def insert_praw_object(praw_object):
+    print(f"insert_praw_object: {praw_object.__repr__()} ")
     zen_kind = get_zen_kind(praw_object)
     is_post = False
     is_comment = False
-# =============================================================================
-#     is_subreddit = False
-#     is_account = False
-# =============================================================================
+    
     if zen_kind == zen_kind_enum['post']:
         is_post = True
     elif zen_kind == zen_kind_enum['comment']:
         is_comment = True
-# =============================================================================
-#     elif zen_kind == zen_kind_enum['subreddit']:
-#         is_subreddit = True
-#     elif zen_kind == zen_kind_enum['account']:
-#         is_account = True
-# =============================================================================
-    
+
     set_zen_obj_vars(praw_object)
     obj_vars = vars(praw_object)
     version = obj_vars[f'zen_{zen_kind.name}_version_id']
@@ -299,27 +291,24 @@ def insert_praw_object(praw_object):
         subreddit = praw_object.subreddit
         subreddit_ids = mydb.get_id_params(subreddit.fullname, 'subreddits')
         obj_vars['zen_subreddit_id'] = subreddit_ids['zen_subreddit_id']
-        print('Recursively inserting subreddit')
         insert_praw_object(subreddit)
         
-        account = praw_object.author
-        account_ids = mydb.get_id_params(account.fullname, 'accounts')
-        obj_vars['zen_account_id'] = account_ids['zen_account_id']
-        print('Recursively inserting account')
-        insert_praw_object(account)
+        if has_valid_praw_author(praw_object):
+            account = praw_object.author
+            account_ids = mydb.get_id_params(account.fullname, 'accounts')
+            obj_vars['zen_account_id'] = account_ids['zen_account_id']
+            insert_praw_object(account)
     
     if is_comment:
         post = praw_object.submission
         post_ids = mydb.get_id_params(post.fullname, 'posts')
         obj_vars['zen_post_id'] = post_ids['zen_post_id']
-        print('Recursively inserting post')
         insert_praw_object(post)
 
     df = pd.DataFrame([obj_vars]).set_index(f'zen_{zen_kind.name}_detail_id')
     cleaned_frames, _ = clean_and_normalize(df, schema_name)
-    insert_from_cleaned_frames(cleaned_frames, SchemaConfig(schema_name))
-    print(f"Finished writing {zen_kind.name} {praw_object.fullname} version {version}")
-    
+    schema = SchemaConfig(schema_name)
+    insert_from_cleaned_frames(cleaned_frames, schema)
 
 def insert_from_cleaned_frames(cleaned_frames, schema):
     schema_sing = schema.name[:-1]
@@ -362,6 +351,7 @@ def insert_from_cleaned_frames(cleaned_frames, schema):
     ##
     
     for target, source in target_sources:
+        
         required_columns = table_columns[target]
         df = cleaned_frames[source].reset_index()
         if len(df):
@@ -377,21 +367,23 @@ def insert_from_cleaned_frames(cleaned_frames, schema):
                 if target == schema.name:
                     df = df_version_1
                 else:
+                    zen_detail_ids_to_write = df[detail_id]
                     now_eastern = datetime.now(east_time).replace(tzinfo=None)
                     time_since = now_eastern - mrd['zen_created_at'] 
                     time_since_mask = time_since.apply(lambda x: x.seconds/60/60 > hours_to_wait)
                     mrd = mrd[time_since_mask]
-                    detail_ids_to_keep = mrd[detail_id].to_list()
+                    if len(mrd):
+                        detail_ids_to_keep = mrd[detail_id].to_list()
+                    else:
+                        detail_ids_to_keep = []
                     
                     time_since_mask_df = df_not_version_1[detail_id].apply(lambda x: x in detail_ids_to_keep)
                     df_not_version_1 = df_not_version_1[time_since_mask_df]
+                    detail_ids_to_keep = df_not_version_1[detail_id].drop_duplicates().to_list()
+                    if len(df_not_version_1) and len(mrd): # If there's no new data old enought o justify being written
                     
-                    if len(df_not_version_1):
-                        if 'details' in target:
-                            # TODO: Currently wrong
-                            # This should be unix epoch or something
-        
-                            
+                        if 'details' in target or 'versions' in target:
+    
                             seen_details = mrd[mrd[main_id].apply(lambda x: x in df_not_version_1[main_id])]
                             drop_dupes = pd.concat([seen_details[df_not_version_1.columns],df_not_version_1])
                             drop_dupes.drop(columns = detail_id, inplace = True)
@@ -401,30 +393,35 @@ def insert_from_cleaned_frames(cleaned_frames, schema):
                             mask = df_not_version_1[main_id].apply(lambda x: x in zen_ids_to_write)
                             df_not_version_1 = df_not_version_1[mask]
                             zen_detail_ids_to_write = df_not_version_1[detail_id].to_list()
-                            
-                            df = pd.concat([df_version_1,df_not_version_1])
+                    
+                        if target == 'gildings':
+                            #TODO: Dynamically append new gildings
+                            pass
                         
-                        if schema.name not in source:
-                            mask = df[detail_id].apply(lambda x: x in zen_detail_ids_to_write)
-                            df = df[mask]
+                        if target == 'all_awardings':
+                            #TODO: Dynamically append new awardings
+                            pass
+                            
+                    df = pd.concat([df_version_1,df_not_version_1])
+                        
+                    if schema.name not in source:
+                        mask = df[detail_id].apply(lambda x: x in zen_detail_ids_to_write)
+                        df = df[mask]
             
             if len(df):
                 cols_to_drop = set(df.columns).difference(required_columns)
                 if len(cols_to_drop):
                     cols_to_drop_text = '\n'.join(cols_to_drop)
-                    log.info(f"Dropping from {target}:\n {cols_to_drop_text}")
+                    log.debug(f" Dropping from {target}:\n {cols_to_drop_text}")
                 log.info(" Writing " + target)
     
-                
                 df.drop(columns = cols_to_drop)\
                     .to_sql(name = target,
                             schema = schema.name,
                             con = environ['MAIN_MEDIA_DATABASE'], 
                             if_exists = 'append', # DO NOT CHANGE THIS
                             index = False)
-                log.info(" Success \n")
-                print(f"Wrote something to {schema.name}.{target}")
+                log.info(f" Wrote something to {schema.name}.{target}")
             else:
-                log.info(" Didn't write anything.")
-                print(f"Didn't write anything to {schema.name}.{target}")
+                log.info(f" Didn't write anything to {schema.name}.{target}")
   

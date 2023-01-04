@@ -1,4 +1,3 @@
-#! /Users/jacob/Documents/github_local/database/venv/bin/python3
 # -*- coding: utf-8 -*-
 
 
@@ -6,12 +5,10 @@ import praw
 from os import environ
 from dotenv import load_dotenv
 from mydatabasemodule.praw_output_cleaner import insert_praw_object
-import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import argparse
 import signal
-import queue
-import sys
 
 parser = argparse.ArgumentParser(description="Crawler parser")
 parser.add_argument("--debug", 
@@ -67,52 +64,56 @@ if args.comments:
 if args.posts:
     kind = 'POSTS'
     stream = subreddit.stream.submissions(pause_after=-1, skip_existing = True)
-else:
-    kind = 'ALL'
-    post_stream = subreddit.stream.submissions(pause_after=-1, skip_existing = True)
-    comment_stream = subreddit.stream.comments(pause_after=-1, skip_existing = True)
-    
+
 log = logging.getLogger(f'{kind} LISTENER')
 
-q = queue.Queue()
-stop_event = threading.Event()
-    
-def listen_to(stream, kind):
-    for praw_object in stream:
-        if praw_object is not None:
-            log.info(' ',praw_object, f'added to queue by {kind} stream')
-            q.put(praw_object)
-        else:
-            if stop_event.is_set():
-                break
-
-
-def insert_worker():
-    while True:
-        praw_object = q.get()
-        log.info(f' Working on {praw_object}')
+def futures_handler(futures):
+    # Check that it worked
+    for future in as_completed(futures):
+        praw_object = futures[future]
         try:
-            insert_praw_object(praw_object)
-            q.task_done()
-        except Exception as e:
-            log.info(f" Exception for {praw_object.__repr__()}")
-            raise e
-            stop_event.set()
-        if not q.unfinished_tasks and stop_event.is_set():
-            break
+            future.result()
+        except Exception as exc:
+            print(f'{praw_object} generated an exception: {exc}')
+        else:
+            print(f'{praw_object} is ok')
+        finally:
+            futures.pop(future)
+
+class GracefulKiller:
+  kill_now = False
+  def __init__(self):
+    signal.signal(signal.SIGINT, self.exit_gracefully)
+    signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+  def exit_gracefully(self, *args):
+    self.kill_now = True
+    
+def listen_to(stream):
+    futures = {}
+    with ThreadPoolExecutor(10) as executor:
+        while not killer.kill_now:
+            for praw_object in stream:
+                print("listening")
+                if praw_object is not None:
+                    print(praw_object.fullname)
+                    future = executor.submit(insert_praw_object, praw_object)
+                    futures[future] = praw_object
+                else:
+                    print("None")
+                    if len(futures):
+                        print("Handling futures")
+                        future = executor.submit(futures_handler, futures)
+                        futures[future] = 'Futures handler'
+                    break
+#while True:
+killer = GracefulKiller()
 
 
-worker_thread = threading.Thread(name = 'worker_thread', target=insert_worker, daemon=True)
-comment_thread = threading.Thread(name = 'comment_thread', target=listen_to, args = [comment_stream,'comment'], daemon=True)
-post_thread = threading.Thread(name = 'post_thread', target=listen_to, args = [post_stream,'post'], daemon=True)
+listen_to(stream)
 
-try:
-    post_thread.start()
-    comment_thread.start()
-    worker_thread.start()
-    log.info("Listening")
-    worker_thread.join()
-except:
-    log.info(f"Gracefully exiting. There are still {q.unfinished_tasks} unfinished_tasks in the queue.")
-    stop_event.set()
-    worker_thread.join()
+        
+
+
+
+

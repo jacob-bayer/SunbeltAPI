@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 from models import Post
 from ariadne import convert_kwargs_to_snake_case
 from datetime import datetime
@@ -19,9 +20,9 @@ def resolve_posts(obj, info):
     return payload
 
 @convert_kwargs_to_snake_case
-def resolve_post(obj, info, post_post_id):
+def resolve_post(obj, info, post_zen_post_id):
     try:
-        post = Post.query.get(post_post_id)
+        post = Post.query.get(post_zen_post_id)
         payload = {
             "success": True,
             "post": post.to_dict()
@@ -30,7 +31,7 @@ def resolve_post(obj, info, post_post_id):
     except AttributeError:  # post not found
         payload = {
             "success": False,
-            "errors": [f"Post item matching id {post_post_id} not found"]
+            "errors": [f"Post item matching id {post_zen_post_id} not found"]
         }
 
     return payload

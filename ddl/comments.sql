@@ -87,13 +87,12 @@ CREATE TABLE COMMENTS.comment_details (
 );
 CREATE INDEX ix_comments_comment_details ON comments.comment_details USING btree (zen_comment_detail_id);
 
--- "comments".all_awardings definition
+-- "comments".awardings definition
 
 -- Drop table
 
--- DROP TABLE "comments".all_awardings;
-
-CREATE TABLE "comments".all_awardings (
+-- DROP TABLE "comments".awardings;
+CREATE TABLE "comments".awardings (
 	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	zen_comment_detail_id int8 NOT NULL REFERENCES comments.comment_details(zen_comment_detail_id),
 	zen_created_at timestamp NOT NULL DEFAULT now(),
@@ -124,7 +123,7 @@ CREATE TABLE "comments".all_awardings (
 	award_type text NULL,
 	static_icon_url text NULL
 );
-CREATE INDEX ix_comments_all_awardings_zen_awarding_id ON comments.all_awardings USING btree (zen_awarding_id);
+CREATE INDEX ix_comments_awardings_zen_awarding_id ON comments.awardings USING btree (zen_awarding_id);
 
 
 
@@ -139,7 +138,6 @@ CREATE TABLE "comments".gildings (
 	zen_comment_detail_id int8 NOT NULL REFERENCES comments.comment_details(zen_comment_detail_id),
 	reddit_gid text NULL,
 	value numeric NULL,
-	zen_modified_at timestamp NOT NULL,
     zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_comments_gildings_zen_gilding_id ON comments.gildings USING btree (zen_gilding_id);
@@ -161,8 +159,5 @@ JOIN comments.comments USING (zen_comment_id)
 JOIN comments.comment_details details USING (zen_comment_detail_id)
 ORDER BY zen_comment_id, zen_comment_version_id DESC
 )
-
-
-
 
 

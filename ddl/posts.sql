@@ -142,11 +142,10 @@ CREATE INDEX ix_posts_post_details ON posts.post_details USING btree (zen_post_d
 
 
 
--- DROP TABLE posts.all_awardings;
-CREATE TABLE posts.all_awardings (
+-- DROP TABLE posts.awardings;
+CREATE TABLE posts.awardings (
 	zen_awarding_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	zen_post_detail_id int8 NOT NULL REFERENCES posts.post_details(zen_post_detail_id),
-	reddit_subreddit_id text NULL,
 	giver_coin_reward text NULL,
 	is_new bool NULL,
 	days_of_drip_extension float8 NULL,
@@ -174,10 +173,9 @@ CREATE TABLE posts.all_awardings (
 	penny_price float8 NULL,
 	award_type text NULL,
 	static_icon_url text NULL,
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now()
 );
-CREATE INDEX ix_posts_all_awardings_zen_awarding_id ON posts.all_awardings USING btree (zen_awarding_id);
+CREATE INDEX ix_posts_awardings_zen_awarding_id ON posts.awardings USING btree (zen_awarding_id);
 
 
 
