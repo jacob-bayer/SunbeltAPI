@@ -26,7 +26,7 @@ db_df = pd.read_sql("""
 
 results_df = pd.DataFrame(results)
 
-from mydatabasemodule.praw_output_cleaner import clean_and_normalize
+from database_helpers.praw_output_cleaner import clean_and_normalize
 
 results_df.index.name = 'zen_comment_id'
 results_frames, _ = clean_and_normalize(results_df, 'comments')

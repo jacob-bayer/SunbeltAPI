@@ -5,13 +5,12 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-from mydatabasemodule.praw_output_cleaner import insert_praw_object
+from database_helpers.praw_output_cleaner import insert_praw_object
 import threading
 import logging
 import argparse
 import signal
 import queue
-import sys
 
 parser = argparse.ArgumentParser(description="Crawler parser")
 parser.add_argument("--debug", 
@@ -80,7 +79,7 @@ stop_event = threading.Event()
 def listen_to(stream, kind):
     for praw_object in stream:
         if praw_object is not None:
-            log.info(' ',praw_object, f'added to queue by {kind} stream')
+            log.info(' ' + praw_object.__repr__() + f'added to queue by {kind} stream')
             q.put(praw_object)
         else:
             if stop_event.is_set():
@@ -102,17 +101,20 @@ def insert_worker():
             break
 
 
+def interrupt_handler(signum, frame):
+    log.info(f" Gracefully exiting. There are still {q.unfinished_tasks} unfinished_tasks in the queue.")
+    stop_event.set()
+
+# No clue how this works but it does
+signal.signal(signal.SIGINT, interrupt_handler)
+
 worker_thread = threading.Thread(name = 'worker_thread', target=insert_worker, daemon=True)
 comment_thread = threading.Thread(name = 'comment_thread', target=listen_to, args = [comment_stream,'comment'], daemon=True)
 post_thread = threading.Thread(name = 'post_thread', target=listen_to, args = [post_stream,'post'], daemon=True)
 
-try:
-    post_thread.start()
-    comment_thread.start()
-    worker_thread.start()
-    log.info("Listening")
-    worker_thread.join()
-except:
-    log.info(f"Gracefully exiting. There are still {q.unfinished_tasks} unfinished_tasks in the queue.")
-    stop_event.set()
-    worker_thread.join()
+post_thread.start()
+comment_thread.start()
+worker_thread.start()
+log.info(" Listening")
+worker_thread.join()
+

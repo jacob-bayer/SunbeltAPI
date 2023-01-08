@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from mydatabasemodule.praw_output_cleaner import (
+from database_helpers.praw_output_cleaner import (
                         clean_and_normalize, 
                         has_valid_praw_author,
                         update_existing_object_collection,

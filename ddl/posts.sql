@@ -22,10 +22,8 @@ CREATE TABLE posts.posts (
 	reddit_account_id TEXT NULL,
 	reddit_subreddit_id text NOT NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now(),
-	subreddit_name_prefixed text NOT NULL,
 	title text NOT NULL,
 	approved_at_utc text NULL,
-	subreddit_type text NULL,
 	permalink text NULL,
 	url text NOT NULL,
 	thumbnail_height int8 NULL,
@@ -185,7 +183,6 @@ CREATE TABLE posts.gildings (
 	zen_post_detail_id int8 NOT NULL REFERENCES posts.post_details(zen_post_detail_id),
 	reddit_gid text NULL,
 	value int8 NULL,
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_posts_gildings_zen_gilding_id ON posts.gildings USING btree (zen_gilding_id);
@@ -195,7 +192,7 @@ CREATE INDEX ix_posts_gildings_zen_gilding_id ON posts.gildings USING btree (zen
 CREATE TABLE posts.media (
 	zen_media_id int8 PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	zen_post_detail_id int8 NOT NULL REFERENCES posts.post_details(zen_post_detail_id),
-	"type" text NULL,
+	media_type text NULL,
 	oembed_provider_url text NULL,
 	oembed_version text NULL,
 	oembed_title text NULL,
@@ -219,7 +216,6 @@ CREATE TABLE posts.media (
 	reddit_video_hls_url text NULL,
 	reddit_video_is_gif bool NULL,
 	reddit_video_transcoding_status text NULL,
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_posts_media_media_id ON posts.media USING btree (zen_media_id);
@@ -233,7 +229,6 @@ CREATE TABLE posts.media_embed (
 	width float8 NULL,
 	scrolling bool NULL,
 	height float8 NULL,
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_posts_media_embed_zen_media_embed_id ON posts.media_embed USING btree (zen_media_embed_id);
@@ -267,7 +262,6 @@ CREATE TABLE posts.secure_media (
 	reddit_video_hls_url text NULL,
 	reddit_video_is_gif bool NULL,
 	reddit_video_transcoding_status text NULL,
-	zen_modified_at timestamp NULL,
 	zen_created_at timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_posts_secure_media_zen_secure_media_id ON posts.secure_media USING btree (zen_secure_media_id);

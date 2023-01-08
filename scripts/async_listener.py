@@ -4,7 +4,7 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-from mydatabasemodule.praw_output_cleaner import (
+from database_helpers.praw_output_cleaner import (
                         SchemaConfig,
                         WriteMode,
                         async_insert_praw_object,

@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-   name='mydatabasemodule',
+   name='sunbelt',
    version='1.0',
    description='Used in my crawlers',
    author='Jacob Bayer',
    author_email='jacobbenjaminbayer@gmail.com',
-   packages =['mydatabasemodule']
+   packages =find_packages()
 )
 

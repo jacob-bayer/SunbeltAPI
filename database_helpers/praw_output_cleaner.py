@@ -2,13 +2,14 @@
 
 import pandas as pd
 import logging
-from mydatabasemodule import database_helpers as mydb
+from database_helpers import database_helpers as mydb
 from enum import Enum
 from dataclasses import dataclass
 from os import environ
 import asyncio
 from datetime import datetime
 import pytz
+from static import HOURS_TO_WAIT_DICT
 east_time = pytz.timezone('US/Eastern')
 
 log = logging.getLogger("CLEANER")
@@ -34,7 +35,6 @@ def get_zen_kind(praw_object):
                  'Subreddit'  : zen_kind_enum['subreddit'],
                  'Redditor'   : zen_kind_enum['account']
                  }
-    
     input_class_name = praw_object.__class__.__name__
     return lookup_dict[input_class_name]
 
@@ -316,12 +316,7 @@ def insert_from_cleaned_frames(cleaned_frames, schema):
     detail_id = f'zen_{schema_sing}_detail_id'
     version_id = f'zen_{schema_sing}_version_id'
     
-    hours_to_wait_dict = {'subreddits': 24,
-                          'accounts': 24,
-                          'posts': 1,
-                          'comments': 0.25}
-    
-    hours_to_wait = hours_to_wait_dict[schema.name]
+    hours_to_wait = HOURS_TO_WAIT_DICT[schema.name]
     
     main_df = cleaned_frames[schema.name]
     v1_detail_ids = main_df[main_df[version_id] == 1].index.to_list()

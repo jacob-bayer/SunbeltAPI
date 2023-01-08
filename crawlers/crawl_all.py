@@ -6,7 +6,7 @@ from os import environ
 from dotenv import load_dotenv
 import pandas as pd
 
-from mydatabasemodule.praw_output_cleaner import (
+from database_helpers.praw_output_cleaner import (
                         clean_and_normalize, 
                         has_valid_praw_author,
                         update_existing_object_collection,
@@ -15,7 +15,7 @@ from mydatabasemodule.praw_output_cleaner import (
                         WriteMode
                         )
 
-import mydatabasemodule.database_helpers as mydb
+import database_helpers.database_helpers as mydb
 from datetime import datetime
 import logging
 import argparse

@@ -4,7 +4,7 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-from mydatabasemodule.praw_output_cleaner import insert_praw_object
+from database_helpers.praw_output_cleaner import insert_praw_object
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import argparse

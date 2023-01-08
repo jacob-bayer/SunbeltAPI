@@ -7,7 +7,7 @@ Created on Fri Dec 16 10:51:45 2022
 """
 import praw
 import pandas as pd
-from mydatabasemodule.praw_output_cleaner import clean_and_normalize
+from database_helpers.praw_output_cleaner import clean_and_normalize
 from os import environ
 from dotenv import load_dotenv
 import time
