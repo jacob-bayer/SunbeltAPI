@@ -1,0 +1,95 @@
+schema {
+    query: Query
+}
+
+type Post {
+    zen_post_id: ID!
+    reddit_post_id: String
+    reddit_account_id: String
+    reddit_subreddit_id: String
+    reddit_unique_id : String
+    title: String
+    permalink : String
+    author : Account
+    subreddit : Subreddit
+    comments : [Comment]
+    versions : [PostDetail]
+    zen_created_at : String
+    most_recent_detail : PostDetail
+}
+
+type Subreddit {
+    zen_subreddit_id: ID!
+    reddit_subreddit_id: String
+    url: String
+    zen_created_at: String
+    display_name_prefixed: String
+    title: String
+    display_name: String
+    created: Float
+    lang: String
+    created_utc: Float
+}
+
+type PostDetail {
+    zen_post_detail_id : ID!
+    zen_post_version_id: Int!
+    zen_created_at : String
+    selftext : String
+    downs : Int
+    ups : Int
+    upvote_ratio : Float
+}
+
+type Comment {
+    zen_comment_id: ID!
+    zen_post_id: Int
+    zen_subreddit_id: Int
+    zen_account_id: Int
+    reddit_comment_id: String
+    reddit_parent_id: String
+    reddit_post_id: String
+    reddit_account_id: String
+    reddit_subreddit_id: String
+    zen_created_at: String
+    created_utc: Float
+    depth: String
+    permalink: String
+    is_submitter: Boolean
+    created: Float
+}
+
+type Account {
+    zen_account_id: ID!
+    zen_created_at: String
+    name: String
+    reddit_account_id: String
+}
+
+
+type PostResult {
+    success: Boolean!
+    errors: [String]
+    post: Post
+}
+
+type PostsResult {
+    success: Boolean!
+    errors: [String]
+    posts: [Post]
+}
+
+type Query {
+    posts(posted_before: String,
+          posted_after: String,
+          updated_before: String, 
+          updated_after: String): PostsResult!
+    post(postById: ID!): PostResult!
+}
+
+type DeletePostResult {
+    success: Boolean!
+    errors: [String]
+}
+
+
