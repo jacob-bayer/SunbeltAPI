@@ -23,17 +23,21 @@ class Subreddit(db.Model):
     is_enrolled_in_new_modmail = Column(Text)
 
     posts = relationship('Post', back_populates='subreddit')
-    comments = relationship('Comment', back_populates='subreddit')
     versions = relationship('SubredditVersion', back_populates='subreddit')
 
     @property
     def reddit_unique_id(self):
         return self.reddit_subreddit_id
 
+    @property
+    def zen_unique_id(self):
+        return self.zen_subreddit_id
+
     def to_dict(self):
         return {
             'zen_subreddit_id': self.zen_subreddit_id,
             'reddit_unique_id' : self.reddit_unique_id,
+            'zen_unique_id' : self.zen_unique_id,
             'reddit_subreddit_id': self.reddit_subreddit_id,
             'url': self.url,
             'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
@@ -173,12 +177,15 @@ class Post(db.Model):
 
     subreddit = relationship('Subreddit', back_populates='posts')
     author = relationship('Account', back_populates='posts')
-    comments = relationship('Comment', back_populates='post')
     versions = relationship('PostVersion', back_populates='post')
 
     @property
     def reddit_unique_id(self):
         return self.reddit_post_id
+
+    @property
+    def zen_unique_id(self):
+        return self.zen_post_id
 
     def __repr__(self):
         return f"ZenPost({self.reddit_post_id})"
@@ -191,11 +198,11 @@ class Post(db.Model):
             "reddit_account_id" : self.reddit_account_id,
             "reddit_subreddit_id" : self.reddit_subreddit_id,
             'reddit_unique_id' : self.reddit_unique_id,
+            'zen_unique_id' : self.zen_unique_id,
             "title" : self.title,
             "permalink" : self.permalink,
-            "author" : self.author.to_dict(),
+            "author" : self.author.to_dict() if self.author else None,
             "versions" : [v.detail.to_dict() for v in self.versions],
-            "comments" : [c.to_dict() for c in self.comments],
             "subreddit" : self.subreddit.to_dict(),
             "most_recent_detail" : self.most_recent_detail.to_dict()
         }
@@ -203,6 +210,8 @@ class Post(db.Model):
     @property
     def most_recent_detail(self):
         return self.versions[-1].detail
+
+
 
     # This works but the init_on_load function conflicts with author for some reason
     
@@ -331,6 +340,8 @@ class PostDetail(db.Model):
         return {
         "zen_post_detail_id" : self.zen_post_detail_id,
         "zen_post_version_id" : self.version.zen_post_version_id,
+        "zen_detail_id" : self.zen_post_detail_id,
+        "zen_version_id" : self.version.zen_post_version_id,
         "zen_created_at" : self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
         "gilded" : self.gilded,
         "selftext" : self.selftext,
@@ -488,12 +499,15 @@ class Account(db.Model):
     created_utc = Column(Float(53))
 
     posts = relationship('Post', back_populates='author')
-    comments = relationship('Comment', back_populates='author')
     versions = relationship('AccountVersion', back_populates='account')
 
     @property
     def reddit_unique_id(self):
         return self.reddit_account_id
+
+    @property
+    def zen_unique_id(self):
+        return self.zen_account_id
 
     def __repr__(self):
         return f'ZenAccount({self.reddit_account_id})'
@@ -503,7 +517,9 @@ class Account(db.Model):
             'zen_account_id': self.zen_account_id,
             'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'name': self.name,
-            'reddit_account_id': self.reddit_account_id
+            'reddit_account_id': self.reddit_account_id,
+            'reddit_unique_id': self.reddit_unique_id,
+            'zen_unique_id': self.zen_unique_id
         }
 
 class AccountVersion(db.Model):
@@ -567,10 +583,8 @@ class Comment(db.Model):
     is_submitter = Column(Boolean)
     created = Column(Numeric)
 
-    post = relationship('Post', back_populates='comments')
-    author = relationship('Account', back_populates='comments')
+    author = relationship('Account')
     versions = relationship('CommentVersion', back_populates='comment')
-    subreddit = relationship('Subreddit', back_populates='comments')
 
     def __repr__(self):
         return f'ZenComment({self.reddit_comment_id})'
@@ -587,11 +601,15 @@ class Comment(db.Model):
         return self.reddit_comment_id
 
     @property
+    def zen_unique_id(self):
+        return self.zen_post_id
+
+    @property
     def most_recent_detail(self):
         return self.versions[-1].detail
 
     def to_dict(self):
-        return {
+        main_dict = {
             'zen_comment_id': self.zen_comment_id,
             'zen_post_id': self.zen_post_id,
             'zen_subreddit_id': self.zen_subreddit_id,
@@ -600,14 +618,19 @@ class Comment(db.Model):
             'reddit_parent_id': self.reddit_parent_id,
             'reddit_post_id': self.reddit_post_id,
             'reddit_account_id': self.reddit_account_id,
+            'reddit_unique_id': self.reddit_unique_id,
+            'zen_unique_id': self.zen_unique_id,
             'reddit_subreddit_id': self.reddit_subreddit_id,
             'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'created_utc': float(self.created_utc),
             'depth': str(self.depth) or '',
             'permalink': self.permalink,
             'is_submitter': self.is_submitter,
-            'created': float(self.created)
+            'created': float(self.created),
+            'author': self.author.to_dict() if self.author else None,
         }
+        most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        return {**main_dict, **most_recent_details_dict}
 
 class CommentVersion(db.Model):
     __tablename__ = 'comment_versions'
@@ -677,6 +700,55 @@ class CommentDetail(db.Model):
     gildings = relationship('CommentGilding', back_populates='detail')
 
     version = relationship('CommentVersion', back_populates='detail')
+
+    def to_dict(self):
+        return {
+            'zen_comment_detail_id': self.zen_comment_detail_id,
+            "zen_comment_version_id" : self.version.zen_comment_version_id,
+            "zen_detail_id" : self.zen_comment_detail_id,
+            "zen_version_id" : self.version.zen_comment_version_id,
+            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'controversiality': str(self.controversiality) or '',
+            'ups': str(self.ups) or '',
+            'downs': str(self.downs) or '',
+            'score': str(self.score) or '',
+            'body': self.body,
+            'edited': str(self.edited) or '',
+            'author_cakeday': self.author_cakeday,
+            'author_has_subscribed': self.author_has_subscribed,
+            'author_is_mod': self.author_is_mod,
+            'comment_type': self.comment_type,
+            'author_flair_type': self.author_flair_type,
+            'total_awards_received': str(self.total_awards_received) or '',
+            'author_flair_template_id': self.author_flair_template_id,
+            'mod_reason_title': self.mod_reason_title,
+            'gilded': str(self.gilded) or '',
+            'archived': self.archived,
+            'collapsed_reason_code': self.collapsed_reason_code,
+            'no_follow': self.no_follow,
+            'can_mod_post': self.can_mod_post,
+            'send_replies': self.send_replies,
+            'mod_note': self.mod_note,
+            'collapsed': self.collapsed,
+            'top_awarded_type': self.top_awarded_type,
+            'author_flair_css_class': self.author_flair_css_class,
+            'author_patreon_flair': self.author_patreon_flair,
+            'body_html': self.body_html,
+            'removal_reason': self.removal_reason,
+            'collapsed_reason': self.collapsed_reason,
+            'distinguished': self.distinguished,
+            'associated_award': self.associated_award,
+            'stickied': self.stickied,
+            'author_premium': self.author_premium,
+            'can_gild': self.can_gild,
+            'unrepliable_reason': self.unrepliable_reason,
+            'author_flair_text_color': self.author_flair_text_color,
+            'score_hidden': self.score_hidden,
+            'subreddit_type': self.subreddit_type,
+            'locked': self.locked,
+            'report_reasons': self.report_reasons,
+            'author_flair_text': self.author_flair_text
+        }
 
 
 class CommentAwarding(db.Model):

@@ -371,9 +371,12 @@ def insert_from_cleaned_frames(cleaned_frames, schema):
                         detail_ids_to_keep = mrd[detail_id].to_list()
                     else:
                         detail_ids_to_keep = []
-                    
-                    time_since_mask_df = df_not_version_1[detail_id].apply(lambda x: x in detail_ids_to_keep)
-                    df_not_version_1 = df_not_version_1[time_since_mask_df]
+                        
+                    time_since_mask_df = mrd[detail_id].apply(lambda x: True) ## This feature is disabled
+                    main_ids_to_keep = mrd[time_since_mask_df][main_id].to_list()
+                    df_not_version_1_mask = df_not_version_1[main_id].apply(lambda x: x in main_ids_to_keep)
+                   
+                    df_not_version_1 = df_not_version_1[df_not_version_1_mask]
                     detail_ids_to_keep = df_not_version_1[detail_id].drop_duplicates().to_list()
                     if len(df_not_version_1) and len(mrd): # If there's no new data old enought o justify being written
                     

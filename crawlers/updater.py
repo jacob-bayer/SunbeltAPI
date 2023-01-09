@@ -1,4 +1,4 @@
-#! /Users/jacob/Documents/github_local/database/venv/bin/python3
+#! ./venv/bin/python3
 # -*- coding: utf-8 -*-
 
 import praw
@@ -10,8 +10,7 @@ import argparse
 from datetime import datetime, timedelta
 from static import HOURS_TO_WAIT_DICT
 import pytz
-import json
-import requests
+from sunbeltclient.sunbeltclient import SunbeltClient
 
 east_time = pytz.timezone('US/Eastern')
 
@@ -39,7 +38,7 @@ load_dotenv()
 reddit = praw.Reddit(
     client_id = environ.get('REDDIT_CLIENT_ID'),
     client_secret = environ.get('REDDIT_SECRET_KEY'),
-    user_agent ="jacobsapp by jacob087",
+    user_agent = "jacobsapp by jacob087",
     check_for_async = False
 )
 
@@ -65,14 +64,24 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
     age_cutoff = now_et - timedelta(hours=hours_to_wait)
     age_cutoff = age_cutoff.strftime("%d-%m-%Y %H:%M:%S")
     
-    ids_to_check = sunbelt.search(kind, 'reddit_unique_id', updated_before = age_cutoff)
-    ids_to_check = [x['reddit_unique_id'].split('_')[1] for x in ids_to_check]
+    ids_to_check = sunbelt.search(kind, 'zen_unique_id reddit_unique_id', updated_before = age_cutoff)
     
     log.info(f" Updating {len(ids_to_check)} {kind}")
     
     praw_func = praw_funcs[kind]
-    for reddit_id in ids_to_check:
-        praw_object = praw_func(id=reddit_id)
+    for id_combo in ids_to_check:
+        praw_object = praw_func(id=id_combo['reddit_unique_id'])
+        praw_object._fetch()
+        kind_sing = kind[:-1]
+        sunbelt.search(kind, 
+                       "zen_unique_id",
+                       "most_recent_zen_version_id",
+                       "most_recent_zen_detail_id",
+                       ById = id_combo['zen_unique_id'])
+        
+        
+        
+        
         insert_praw_object(praw_object)
     
 

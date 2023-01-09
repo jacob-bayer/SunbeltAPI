@@ -8,4 +8,3 @@ setup(
    author_email='jacobbenjaminbayer@gmail.com',
    packages =find_packages()
 )
-

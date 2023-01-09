@@ -8,11 +8,11 @@ type Post {
     reddit_account_id: String
     reddit_subreddit_id: String
     reddit_unique_id : String
+    zen_unique_id: Int
     title: String
     permalink : String
     author : Account
     subreddit : Subreddit
-    comments : [Comment]
     versions : [PostDetail]
     zen_created_at : String
     most_recent_detail : PostDetail
@@ -21,6 +21,8 @@ type Post {
 type Subreddit {
     zen_subreddit_id: ID!
     reddit_subreddit_id: String
+    reddit_unique_id : String
+    zen_unique_id: Int
     url: String
     zen_created_at: String
     display_name_prefixed: String
@@ -34,6 +36,8 @@ type Subreddit {
 type PostDetail {
     zen_post_detail_id : ID!
     zen_post_version_id: Int!
+    zen_detail_id : ID!
+    zen_version_id: Int!
     zen_created_at : String
     selftext : String
     downs : Int
@@ -46,7 +50,9 @@ type Comment {
     zen_post_id: Int
     zen_subreddit_id: Int
     zen_account_id: Int
+    zen_unique_id: ID!
     reddit_comment_id: String
+    reddit_unique_id : String
     reddit_parent_id: String
     reddit_post_id: String
     reddit_account_id: String
@@ -57,11 +63,70 @@ type Comment {
     permalink: String
     is_submitter: Boolean
     created: Float
+    most_recent_zen_comment_detail_id: Int,
+    most_recent_zen_comment_version_id: Int,
+    most_recent_zen_detail_id: Int,
+    most_recent_zen_version_id: Int,
+    most_recent_zen_created_at: String,
+    most_recent_controversiality: String,
+    most_recent_ups: String,
+    most_recent_downs: String,
+    most_recent_score: String,
+    most_recent_body: String,
+    most_recent_edited: String,
+    most_recent_author_cakeday: Boolean,
+    most_recent_author_has_subscribed: Boolean,
+    most_recent_author_is_mod: Boolean,
+    most_recent_comment_type: String,
+    most_recent_author_flair_type: String,
+    most_recent_total_awards_received: String,
+    most_recent_author_flair_template_id: String,
+    most_recent_mod_reason_title: String,
+    most_recent_gilded: String,
+    most_recent_archived: Boolean,
+    most_recent_collapsed_reason_code: String,
+    most_recent_no_follow: Boolean,
+    most_recent_can_mod_post: Boolean,
+    most_recent_send_replies: Boolean,
+    most_recent_mod_note: String,
+    most_recent_collapsed: Boolean,
+    most_recent_top_awarded_type: String,
+    most_recent_author_flair_css_class: String,
+    most_recent_author_patreon_flair: Boolean,
+    most_recent_body_html: String,
+    most_recent_removal_reason: String,
+    most_recent_collapsed_reason: String,
+    most_recent_distinguished: String,
+    most_recent_associated_award: String,
+    most_recent_stickied: Boolean,
+    most_recent_author_premium: Boolean,
+    most_recent_can_gild: Boolean,
+    most_recent_unrepliable_reason: String,
+    most_recent_author_flair_text_color: String,
+    most_recent_score_hidden: Boolean,
+    most_recent_subreddit_type: String,
+    most_recent_locked: Boolean,
+    most_recent_report_reasons: String,
+    most_recent_author_flair_text: String
+}
+
+type CommentDetail {
+    zen_comment_detail_id : ID!
+    zen_comment_version_id: Int!
+    zen_detail_id : ID!
+    zen_version_id: Int!
+    zen_created_at : String
+    body : String
+    downs : Int
+    ups : Int
+    upvote_ratio : Float
 }
 
 type Account {
     zen_account_id: ID!
     zen_created_at: String
+    reddit_unique_id : String
+    zen_unique_id: Int
     name: String
     reddit_account_id: String
 }
@@ -79,12 +144,66 @@ type PostsResult {
     posts: [Post]
 }
 
+type CommentResult {
+    success: Boolean!
+    errors: [String]
+    comment: Comment
+}
+
+type CommentsResult {
+    success: Boolean!
+    errors: [String]
+    comments: [Comment]
+}
+
+type AccountResult {
+    success: Boolean!
+    errors: [String]
+    account: Account
+}
+
+type AccountsResult {
+    success: Boolean!
+    errors: [String]
+    accounts: [Account]
+}
+
+type SubredditResult {
+    success: Boolean!
+    errors: [String]
+    subreddit: Subreddit
+}
+
+type SubredditsResult {
+    success: Boolean!
+    errors: [String]
+    subreddits: [Subreddit]
+}
+
 type Query {
+    post(Id: ID!): PostResult!
     posts(posted_before: String,
           posted_after: String,
           updated_before: String, 
           updated_after: String): PostsResult!
-    post(postById: ID!): PostResult!
+
+    comment(ById: ID!): CommentResult!
+    comments(commented_before: String,
+          commented_after: String,
+          updated_before: String, 
+          updated_after: String): CommentsResult!
+
+    account(ById: ID!): AccountResult!
+    accounts(created_before: String,
+          created_after: String,
+          updated_before: String, 
+          updated_after: String): AccountsResult!
+
+    subreddit(ById: ID!): SubredditResult!
+    subreddits(created_before: String,
+          created_after: String,
+          updated_before: String, 
+          updated_after: String): SubredditsResult!
 }
 
 type DeletePostResult {
