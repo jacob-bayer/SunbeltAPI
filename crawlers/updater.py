@@ -4,13 +4,13 @@
 import praw
 from os import environ
 from dotenv import load_dotenv
-from database_helpers.praw_output_cleaner import insert_praw_object         
+#from database_helpers.praw_output_cleaner import insert_praw_object         
 import logging
 import argparse
 from datetime import datetime, timedelta
 from static import HOURS_TO_WAIT_DICT
 import pytz
-from sunbeltclient.sunbeltclient import SunbeltClient
+from sunbeltclient.SunbeltClient import SunbeltClient
 
 east_time = pytz.timezone('US/Eastern')
 
@@ -60,28 +60,30 @@ praw_funcs = {
     'accounts' : reddit.redditor
     }
 
+sunbelt_funcs = {
+    'posts' : sunbelt.posts,
+    'comments' : sunbelt.comments,
+    'subreddits' : sunbelt.subreddits,
+    'accounts' : sunbelt.accounts
+    }
+
 for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
+    sunbelt_func = sunbelt_funcs[kind]
+    
     age_cutoff = now_et - timedelta(hours=hours_to_wait)
     age_cutoff = age_cutoff.strftime("%d-%m-%Y %H:%M:%S")
     
-    ids_to_check = sunbelt.search(kind, 'zen_unique_id reddit_unique_id', updated_before = age_cutoff)
+    zen_objs = sunbelt_func('zen_unique_id reddit_unique_id', updated_before = age_cutoff)
     
-    log.info(f" Updating {len(ids_to_check)} {kind}")
+    log.info(f" Updating {len(zen_objs)} {kind}")
     
     praw_func = praw_funcs[kind]
-    for id_combo in ids_to_check:
-        praw_object = praw_func(id=id_combo['reddit_unique_id'])
+
+    for zen_obj in zen_objs:
+        praw_object = praw_func(id=zen_obj.reddit_unique_id)
         praw_object._fetch()
-        kind_sing = kind[:-1]
-        sunbelt.search(kind, 
-                       "zen_unique_id",
-                       "most_recent_zen_version_id",
-                       "most_recent_zen_detail_id",
-                       ById = id_combo['zen_unique_id'])
         
         
         
-        
-        insert_praw_object(praw_object)
     
 
