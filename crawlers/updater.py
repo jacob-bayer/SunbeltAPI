@@ -8,9 +8,14 @@ from dotenv import load_dotenv
 import logging
 import argparse
 from datetime import datetime, timedelta
-from static import HOURS_TO_WAIT_DICT
+#from static import HOURS_TO_WAIT_DICT
+HOURS_TO_WAIT_DICT = {'subreddits': 24,
+                        'accounts': 24,
+                        'posts': 1,
+                        'comments': 0.25}
+
 import pytz
-from sunbeltclient.SunbeltClient import SunbeltClient
+from SAWP import SunbeltClient
 
 east_time = pytz.timezone('US/Eastern')
 
@@ -36,8 +41,8 @@ if not args.suppress_logs:
 load_dotenv()
 
 reddit = praw.Reddit(
-    client_id = environ.get('REDDIT_CLIENT_ID'),
-    client_secret = environ.get('REDDIT_SECRET_KEY'),
+    client_id = environ['REDDIT_CLIENT_ID'],
+    client_secret = environ['REDDIT_SECRET_KEY'],
     user_agent = "jacobsapp by jacob087",
     check_for_async = False
 )
@@ -73,14 +78,25 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
     age_cutoff = now_et - timedelta(hours=hours_to_wait)
     age_cutoff = age_cutoff.strftime("%d-%m-%Y %H:%M:%S")
     
-    zen_objs = sunbelt_func('zen_unique_id reddit_unique_id', updated_before = age_cutoff)
-    
+
+
+    zen_objs = sunbelt_func.all(updated_before = age_cutoff)
+
+    zen_objs = list(zen_objs)
+
     log.info(f" Updating {len(zen_objs)} {kind}")
     
     praw_func = praw_funcs[kind]
 
     for zen_obj in zen_objs:
-        praw_object = praw_func(id=zen_obj.reddit_unique_id)
+        if kind == 'subreddits':
+            identifier = zen_obj.display_name
+        elif kind == 'accounts':
+            identifier = zen_obj.name
+        else:
+            identifier = zen_obj.reddit_unique_id
+
+        praw_object = praw_func(identifier)
         praw_object._fetch()
         
         
