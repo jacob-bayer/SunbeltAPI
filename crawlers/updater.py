@@ -9,13 +9,18 @@ import logging
 import argparse
 from datetime import datetime, timedelta
 #from static import HOURS_TO_WAIT_DICT
-HOURS_TO_WAIT_DICT = {'subreddits': 24,
-                        'accounts': 24,
-                        'posts': 1,
-                        'comments': 0.25}
+HOURS_TO_WAIT_DICT = {'subreddit': 24,
+                        'account': 24,
+                        'post': 1,
+                        'comment': 0.25}
 
 import pytz
 from SAWP import SunbeltClient
+import pandas as pd
+from database_helpers.praw_output_cleaner import (
+                        clean_and_normalize,
+                        insert_from_cleaned_frames,
+                        SchemaConfig)
 
 east_time = pytz.timezone('US/Eastern')
 
@@ -53,23 +58,23 @@ log = logging.getLogger('UPDATER')
 
 now_et = datetime.now(east_time)
 
-post_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['posts'])).strftime("%d-%m-%Y %H:%M:%S")
-comment_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['comments'])).strftime("%d-%m-%Y %H:%M:%S")
-subreddit_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['subreddits'])).strftime("%d-%m-%Y %H:%M:%S")
-account_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['accounts'])).strftime("%d-%m-%Y %H:%M:%S")
+post_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['post'])).strftime("%d-%m-%Y %H:%M:%S")
+comment_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['comment'])).strftime("%d-%m-%Y %H:%M:%S")
+subreddit_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['subreddit'])).strftime("%d-%m-%Y %H:%M:%S")
+account_time = (now_et - timedelta(hours=HOURS_TO_WAIT_DICT['account'])).strftime("%d-%m-%Y %H:%M:%S")
 
 praw_funcs = {
-    'posts' : reddit.submission,
-    'comments' : reddit.comment,
-    'subreddits' : reddit.subreddit,
-    'accounts' : reddit.redditor
+    'post' : reddit.submission,
+    'comment' : reddit.comment,
+    'subreddit' : reddit.subreddit,
+    'account' : reddit.redditor
     }
 
 sunbelt_funcs = {
-    'posts' : sunbelt.posts,
-    'comments' : sunbelt.comments,
-    'subreddits' : sunbelt.subreddits,
-    'accounts' : sunbelt.accounts
+    'post' : sunbelt.posts,
+    'comment' : sunbelt.comments,
+    'subreddit' : sunbelt.subreddits,
+    'account' : sunbelt.accounts
     }
 
 for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
@@ -80,11 +85,11 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
     
 
 
-    zen_objs = sunbelt_func.all(updated_before = age_cutoff)
+    zen_objs = sunbelt_func.all(updatedBefore = age_cutoff)
 
     zen_objs = list(zen_objs)
 
-    log.info(f" Updating {len(zen_objs)} {kind}")
+    log.info(f" Updating {len(zen_objs)} {kind}s")
     
     praw_func = praw_funcs[kind]
 
@@ -98,8 +103,13 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
 
         praw_object = praw_func(identifier)
         praw_object._fetch()
-        
-        
+        obj_vars = vars(praw_object)
+        obj_vars[f'zen_{kind}_id'] = zen_obj.zen_unique_id
+        obj_vars[f'zen_{kind}_version_id'] = zen_obj.most_recent_zen_version_id + 1
+        obj_vars[f'zen_{kind}_detail_id'] = max(sunbelt.post_details.zen_detail_id) + 1
+        df = pd.DataFrame([obj_vars]).set_index(f'zen_{kind}_detail_id')
+        cleaned_frames, _ = clean_and_normalize(df, kind + 's')
+        insert_from_cleaned_frames(cleaned_frames, SchemaConfig(kind + 's'))
         
     
 
