@@ -146,6 +146,56 @@ class SubredditDetail(db.Model):
 
     version = relationship('SubredditVersion', back_populates='detail')
 
+    def to_dict(self):
+        return {
+            'zen_subreddit_detail_id': self.zen_subreddit_detail_id,
+            "zen_detail_id" : self.zen_subreddit_detail_id,
+            "zen_version_id" : self.version.zen_subreddit_version_id,
+            "zen_unique_id" : self.version.subreddit.zen_subreddit_id,
+            'zen_created_at': self.zen_created_at,
+            'active_user_count': self.active_user_count,
+            'accounts_active': self.accounts_active,
+            'public_traffic': self.public_traffic,
+            'subscribers': self.subscribers,
+            'subreddit_type': self.subreddit_type,
+            'suggested_comment_sort': self.suggested_comment_sort,
+            'allow_polls': self.allow_polls,
+            'collapse_deleted_comments': self.collapse_deleted_comments,
+            'public_description_html': self.public_description_html,
+            'allow_videos': self.allow_videos,
+            'allow_discovery': self.allow_discovery,
+            'accept_followers': self.accept_followers,
+            'is_crosspostable_subreddit': self.is_crosspostable_subreddit,
+            'notification_level': self.notification_level,
+            'should_show_media_in_comments_setting': self.should_show_media_in_comments_setting,
+            'user_flair_background_color': self.user_flair_background_color,
+            'submit_text_html': self.submit_text_html,
+            'restrict_posting': self.restrict_posting,
+            'free_form_reports': self.free_form_reports,
+            'wiki_enabled': self.wiki_enabled,
+            'header_img': self.header_img,
+            'allow_galleries': self.allow_galleries,
+            'primary_color': self.primary_color,
+            'icon_img': self.icon_img,
+            'quarantine': self.quarantine,
+            'hide_ads': self.hide_ads,
+            'prediction_leaderboard_entry_type': self.prediction_leaderboard_entry_type,
+            'emojis_enabled': self.emojis_enabled,
+            'advertiser_category': self.advertiser_category,
+            'public_description': self.public_description,
+            'comment_score_hide_mins': self.comment_score_hide_mins,
+            'allow_predictions': self.allow_predictions,
+            'community_icon': self.community_icon,
+            'banner_background_image': self.banner_background_image,
+            'original_content_tag_enabled': self.original_content_tag_enabled,
+            'community_reviewed': self.community_reviewed,
+            'submit_text': self.submit_text,
+            'description_html': self.description_html,
+            'spoilers_enabled': self.spoilers_enabled,
+            'allow_talks': self.allow_talks,
+            'all_original_content': self.all_original_content
+        }
+
 
 class Post(db.Model):
     __tablename__ = 'posts'
@@ -188,10 +238,10 @@ class Post(db.Model):
         return self.zen_post_id
 
     def __repr__(self):
-        return f"ZenPost({self.reddit_post_id})"
+        return f"ZenPost({self.zen_post_id})"
     
     def to_dict(self):
-        return {
+        main_dict = {
             "zen_post_id" : self.zen_post_id,
             "zen_created_at" : self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             "reddit_post_id" : self.reddit_post_id,
@@ -203,9 +253,10 @@ class Post(db.Model):
             "permalink" : self.permalink,
             "author" : self.author.to_dict() if self.author else None,
             "versions" : [v.detail.to_dict() for v in self.versions],
-            "subreddit" : self.subreddit.to_dict(),
-            "most_recent_detail" : self.most_recent_detail.to_dict()
+            "subreddit" : self.subreddit.to_dict()
         }
+        most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        return {**main_dict, **most_recent_details_dict}
     
     @property
     def most_recent_detail(self):
@@ -340,8 +391,10 @@ class PostDetail(db.Model):
         return {
         "zen_post_detail_id" : self.zen_post_detail_id,
         "zen_post_version_id" : self.version.zen_post_version_id,
+        "zen_post_id" : self.version.post.zen_post_id,
         "zen_detail_id" : self.zen_post_detail_id,
         "zen_version_id" : self.version.zen_post_version_id,
+        "zen_unique_id" : self.version.post.zen_post_id,
         "zen_created_at" : self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
         "gilded" : self.gilded,
         "selftext" : self.selftext,
@@ -510,7 +563,7 @@ class Account(db.Model):
         return self.zen_account_id
 
     def __repr__(self):
-        return f'ZenAccount({self.reddit_account_id})'
+        return f'ZenAccount({self.zen_account_id})'
 
     def to_dict(self):
         return {
@@ -587,7 +640,7 @@ class Comment(db.Model):
     versions = relationship('CommentVersion', back_populates='comment')
 
     def __repr__(self):
-        return f'ZenComment({self.reddit_comment_id})'
+        return f'ZenComment({self.zen_comment_id})'
 
     @property
     def parent(self):
@@ -602,7 +655,7 @@ class Comment(db.Model):
 
     @property
     def zen_unique_id(self):
-        return self.zen_post_id
+        return self.zen_comment_id
 
     @property
     def most_recent_detail(self):

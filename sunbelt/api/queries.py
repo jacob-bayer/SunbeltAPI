@@ -7,6 +7,7 @@ from datetime import datetime
 
 ######### POSTS ###########
 
+@convert_kwargs_to_snake_case
 def resolve_posts(obj, info, **kwargs):
     
     def convert_date(date):
@@ -21,11 +22,13 @@ def resolve_posts(obj, info, **kwargs):
     posted_after = kwargs.get('posted_after')
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
+    order_by = kwargs.get('order_by')
 
     posts = Post.query
 
-    if updated_before or updated_after:
+    if updated_before or updated_after or order_by:
         posts = posts.join(PostVersion)
+
 
     if updated_before:
         updated_before = convert_date(updated_before)
@@ -43,7 +46,21 @@ def resolve_posts(obj, info, **kwargs):
         posted_after = convert_date(posted_after)
         posts = posts.filter(Post.zen_created_at > posted_after)
     
-    #breakpoint()
+    if order_by:
+        posts = posts.join(PostDetail)
+        order_by_to_cols = {
+            'zen_unique_id' : Post.zen_post_id,
+            'most_recent_zen_version_id': PostVersion.zen_post_version_id,
+            'most_recent_zen_detail_id': PostDetail.zen_post_detail_id
+        }
+
+        for col, sort_by in order_by.items():
+            col_to_order_by = order_by_to_cols.get(col)
+            if sort_by == 'asc':
+                posts = posts.order_by(col_to_order_by.asc())
+            elif sort_by == 'desc':
+                posts = posts.order_by(col_to_order_by.desc())
+
     try:
         posts = [post.to_dict() for post in posts]
         payload = {
@@ -76,9 +93,55 @@ def resolve_post(obj, info, **kwargs):
 
     return payload
 
+@convert_kwargs_to_snake_case
+def resolve_post_detail(obj, info, **kwargs):
+    by_id = kwargs.get('by_id')
+
+    try:
+        post_detail = PostDetail.query.get(by_id)
+        payload = {
+            "success": True,
+            "postdetail": post_detail.to_dict()
+        }
+
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Post detail matching id {by_id} not found"]
+        }
+    
+    return payload
+
+@convert_kwargs_to_snake_case
+def resolve_post_details(obj, info, **kwargs):
+    zen_post_id = kwargs.get('zen_unique_id') or kwargs.get('zen_post_id')
+    
+    if zen_post_id:
+        post = Post.query.get(zen_post_id)
+        details = [v.detail.to_dict() for v in post.versions]
+    else:
+        details = [detail.to_dict() for detail in PostDetail.query.all()] 
+    
+    try:
+        post = Post.query.get(zen_post_id)
+        payload = {
+            "success": True,
+            "postdetails": details
+        }
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Post matching id {zen_post_id} not found"]
+        }
+
+    return payload
+
+
+
 
 ######## COMMENTS ##########
 
+@convert_kwargs_to_snake_case
 def resolve_comments(obj, info, **kwargs):
 
 
@@ -94,10 +157,11 @@ def resolve_comments(obj, info, **kwargs):
     commented_after = kwargs.get('commented_after')
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
+    order_by = kwargs.get('order_by')
 
     comments = Comment.query
 
-    if updated_before or updated_after:
+    if updated_before or updated_after or order_by:
         comments = comments.join(CommentVersion)
 
     if updated_before:
@@ -115,6 +179,21 @@ def resolve_comments(obj, info, **kwargs):
     if commented_after:
         commented_after = convert_date(commented_after)
         comments = comments.filter(Comment.zen_created_at > commented_after)
+
+    if order_by:
+        comments = comments.join(CommentDetail)
+        order_by_to_cols = {
+            'zen_unique_id' : Comment.zen_comment_id,
+            'most_recent_zen_version_id': CommentVersion.zen_comment_version_id,
+            'most_recent_zen_detail_id': CommentDetail.zen_comment_detail_id
+        }
+
+        for col, sort_by in order_by.items():
+            col_to_order_by = order_by_to_cols.get(col)
+            if sort_by == 'asc':
+                comments = comments.order_by(col_to_order_by.asc())
+            elif sort_by == 'desc':
+                comments = comments.order_by(col_to_order_by.desc())
 
     try:
         comments = [comment.to_dict() for comment in comments]
@@ -148,8 +227,54 @@ def resolve_comment(obj, info, **kwargs):
 
     return payload
 
+
+@convert_kwargs_to_snake_case
+def resolve_comment_detail(obj, info, **kwargs):
+    by_id = kwargs.get('by_id')
+
+    try:
+        comment_detail = CommentDetail.query.get(by_id)
+        payload = {
+            "success": True,
+            "commentdetail": comment_detail.to_dict()
+        }
+
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Comment detail matching id {by_id} not found"]
+        }
+
+    return payload
+
+@convert_kwargs_to_snake_case
+def resolve_comment_details(obj, info, **kwargs):
+    zen_comment_id = kwargs.get('zen_unique_id') or kwargs.get('zen_comment_id')
+    
+    if zen_comment_id:
+        comment = Comment.query.get(zen_comment_id)
+        details = [v.detail.to_dict() for v in comment.versions]
+    else:
+        details = [detail.to_dict() for detail in CommentDetail.query.all()] 
+    
+    try:
+        comment = Comment.query.get(zen_comment_id)
+        payload = {
+            "success": True,
+            "commentdetails": details
+        }
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Comment matching id {zen_comment_id} not found"]
+        }
+
+    return payload
+
+
 ######## ACCOUNTS ##########
 
+@convert_kwargs_to_snake_case
 def resolve_accounts(obj, info, **kwargs):
         
     def convert_date(date):
@@ -164,10 +289,11 @@ def resolve_accounts(obj, info, **kwargs):
     created_after = kwargs.get('created_after')
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
+    order_by = kwargs.get('order_by')
 
     accounts = Account.query
 
-    if updated_before or updated_after:
+    if updated_before or updated_after or order_by:
         accounts = accounts.join(AccountVersion)
 
     if updated_before:
@@ -185,6 +311,21 @@ def resolve_accounts(obj, info, **kwargs):
     if created_after:
         created_after = convert_date(created_after)
         accounts = accounts.filter(Account.zen_created_at > created_after)
+
+    if order_by:
+        accounts = accounts.join(AccountDetail)
+        order_by_to_cols = {
+            'zen_unique_id' : Account.zen_account_id,
+            'most_recent_zen_version_id': AccountVersion.zen_account_version_id,
+            'most_recent_zen_detail_id': AccountDetail.zen_account_detail_id
+        }
+
+        for col, sort_by in order_by.items():
+            col_to_order_by = order_by_to_cols.get(col)
+            if sort_by == 'asc':
+                accounts = accounts.order_by(col_to_order_by.asc())
+            elif sort_by == 'desc':
+                accounts = accounts.order_by(col_to_order_by.desc())
         
     try:
         accounts = [account.to_dict() for account in accounts]
@@ -218,8 +359,52 @@ def resolve_account(obj, info, **kwargs):
 
     return payload
 
+@convert_kwargs_to_snake_case
+def resolve_account_detail(obj, info, **kwargs):
+    by_id = kwargs.get('by_id')
+
+    try:
+        account_detail = AccountDetail.query.get(by_id)
+        payload = {
+            "success": True,
+            "accountdetail": account_detail.to_dict()
+        }
+
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Account detail matching id {by_id} not found"]
+        }
+
+    return payload
+
+@convert_kwargs_to_snake_case
+def resolve_account_details(obj, info, **kwargs):
+    zen_account_id = kwargs.get('zen_unique_id') or kwargs.get('zen_account_id')
+    
+    if zen_account_id:
+        account = Account.query.get(zen_account_id)
+        details = [v.detail.to_dict() for v in account.versions]
+    else:
+        details = [detail.to_dict() for detail in AccountDetail.query.all()] 
+    
+    try:
+        account = Account.query.get(zen_account_id)
+        payload = {
+            "success": True,
+            "accountdetails": details
+        }
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Account matching id {zen_account_id} not found"]
+        }
+
+    return payload
+
 ######## SUBREDDITS ##########
 
+@convert_kwargs_to_snake_case
 def resolve_subreddits(obj, info, **kwargs):
         
         def convert_date(date):
@@ -234,10 +419,11 @@ def resolve_subreddits(obj, info, **kwargs):
         created_after = kwargs.get('created_after')
         updated_before = kwargs.get('updated_before')
         updated_after = kwargs.get('updated_after')
-    
+        order_by = kwargs.get('order_by')
+
         subreddits = Subreddit.query
     
-        if updated_before or updated_after:
+        if updated_before or updated_after or order_by:
             subreddits = subreddits.join(SubredditVersion)
     
         if updated_before:
@@ -255,6 +441,21 @@ def resolve_subreddits(obj, info, **kwargs):
         if created_after:
             created_after = convert_date(created_after)
             subreddits = subreddits.filter(Subreddit.zen_created_at > created_after)
+
+        if order_by:
+            subreddits = subreddits.join(SubredditDetail)
+            order_by_to_cols = {
+                'zen_unique_id' : Subreddit.zen_subreddit_id,
+                'most_recent_zen_version_id': SubredditVersion.zen_subreddit_version_id,
+                'most_recent_zen_detail_id': SubredditDetail.zen_subreddit_detail_id
+            }
+
+            for col, sort_by in order_by.items():
+                col_to_order_by = order_by_to_cols.get(col)
+                if sort_by == 'asc':
+                    subreddits = subreddits.order_by(col_to_order_by.asc())
+                elif sort_by == 'desc':
+                    subreddits = subreddits.order_by(col_to_order_by.desc())
             
         try:
             subreddits = [subreddit.to_dict() for subreddit in subreddits]
@@ -287,3 +488,47 @@ def resolve_subreddit(obj, info, **kwargs):
         }
 
     return payload
+
+@convert_kwargs_to_snake_case
+def resolve_subreddit_detail(obj, info, **kwargs):
+    by_id = kwargs.get('by_id')
+
+    try:
+        subreddit_detail = SubredditDetail.query.get(by_id)
+        payload = {
+            "success": True,
+            "subredditdetail": subreddit_detail.to_dict()
+        }
+
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Subreddit detail matching id {by_id} not found"]
+        }
+
+    return payload
+
+@convert_kwargs_to_snake_case
+def resolve_subreddit_details(obj, info, **kwargs):
+    zen_subreddit_id = kwargs.get('zen_unique_id') or kwargs.get('zen_subreddit_id')
+    
+    if zen_subreddit_id:
+        subreddit = Subreddit.query.get(zen_subreddit_id)
+        details = [v.detail.to_dict() for v in subreddit.versions]
+    else:
+        details = [detail.to_dict() for detail in SubredditDetail.query.all()] 
+    
+    try:
+        subreddit = Subreddit.query.get(zen_subreddit_id)
+        payload = {
+            "success": True,
+            "subredditdetails": details
+        }
+    except AttributeError:
+        payload = {
+            "success": False,
+            "errors": [f"Subreddit matching id {zen_subreddit_id} not found"]
+        }
+
+    return payload
+    

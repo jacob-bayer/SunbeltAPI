@@ -1,21 +1,17 @@
 schema {
     query: Query
+    mutation: Mutation
 }
 
-type Post {
-    zen_post_id: ID!
-    reddit_post_id: String
-    reddit_account_id: String
-    reddit_subreddit_id: String
-    reddit_unique_id : String
-    zen_unique_id: Int
-    title: String
-    permalink : String
-    author : Account
-    subreddit : Subreddit
-    versions : [PostDetail]
-    zen_created_at : String
-    most_recent_detail : PostDetail
+input OrderByInput {
+  zen_unique_id: Sort
+  most_recent_zen_version_id: Sort
+  most_recent_zen_detail_id: Sort
+}
+
+enum Sort {
+  asc
+  desc
 }
 
 type Subreddit {
@@ -33,11 +29,47 @@ type Subreddit {
     created_utc: Float
 }
 
+type SubredditDetail {
+    zen_subreddit_detail_id : ID!
+    zen_created_at: String
+    zen_detail_id : Int!
+    zen_version_id: Int!
+    zen_unique_id: Int!
+    active_user_count : Int
+    accounts_active : Int
+    public_traffic : Boolean
+    subscribers : Int
+    subreddit_type : String
+    suggested_comment_sort : String
+    allow_polls : Boolean
+    collapse_deleted_comments : Boolean
+}
+
+type Post {
+    zen_post_id: ID!
+    reddit_post_id: String
+    reddit_account_id: String
+    reddit_subreddit_id: String
+    reddit_unique_id : String
+    zen_unique_id: Int
+    most_recent_zen_version_id: Int
+    most_recent_zen_detail_id: Int
+    title: String
+    permalink : String
+    author : Account
+    subreddit : Subreddit
+    versions : [PostDetail]
+    zen_created_at : String
+    most_recent_detail : PostDetail
+}
+
 type PostDetail {
     zen_post_detail_id : ID!
     zen_post_version_id: Int!
-    zen_detail_id : ID!
+    zen_post_id: Int!
+    zen_detail_id : Int!
     zen_version_id: Int!
+    zen_unique_id: Int!
     zen_created_at : String
     selftext : String
     downs : Int
@@ -113,8 +145,9 @@ type Comment {
 type CommentDetail {
     zen_comment_detail_id : ID!
     zen_comment_version_id: Int!
-    zen_detail_id : ID!
+    zen_detail_id : Int!
     zen_version_id: Int!
+    zen_unique_id: Int!
     zen_created_at : String
     body : String
     downs : Int
@@ -131,6 +164,29 @@ type Account {
     reddit_account_id: String
 }
 
+type AccountDetail {
+    zen_account_detail_id : ID!
+    zen_detail_id : Int!
+    zen_version_id: Int!
+    zen_unique_id: Int!
+    zen_created_at : String
+    comment_karma : Int
+    link_karma : Int
+    total_karma : Int
+    awardee_karma : Int
+    awarder_karma : Int
+    listing_use_sort : Boolean
+    is_employee : Boolean
+    snoovatar_size : String
+    verified : Boolean
+    is_gold : Boolean
+    icon_img : String
+    hide_from_robots : Boolean
+    pref_show_snoovatar : Boolean
+    snoovatar_img : String
+    accept_followers : Boolean
+}
+
 
 type PostResult {
     success: Boolean!
@@ -142,6 +198,18 @@ type PostsResult {
     success: Boolean!
     errors: [String]
     posts: [Post]
+}
+
+type PostDetailResult {
+    success: Boolean!
+    errors: [String]
+    postdetail: PostDetail
+}
+
+type PostDetailsResult {
+    success: Boolean!
+    errors: [String]
+    postdetails: [PostDetail]
 }
 
 type CommentResult {
@@ -156,6 +224,18 @@ type CommentsResult {
     comments: [Comment]
 }
 
+type CommentDetailResult {
+    success: Boolean!
+    errors: [String]
+    commentdetail: CommentDetail
+}
+
+type CommentDetailsResult {
+    success: Boolean!
+    errors: [String]
+    commentdetails: [CommentDetail]
+}
+
 type AccountResult {
     success: Boolean!
     errors: [String]
@@ -166,6 +246,18 @@ type AccountsResult {
     success: Boolean!
     errors: [String]
     accounts: [Account]
+}
+
+type AccountDetailResult {
+    success: Boolean!
+    errors: [String]
+    accountdetail: AccountDetail
+}
+
+type AccountDetailsResult {
+    success: Boolean!
+    errors: [String]
+    accountdetails: [AccountDetail]
 }
 
 type SubredditResult {
@@ -180,35 +272,117 @@ type SubredditsResult {
     subreddits: [Subreddit]
 }
 
-type Query {
-    post(Id: ID!): PostResult!
-    posts(posted_before: String,
-          posted_after: String,
-          updated_before: String, 
-          updated_after: String): PostsResult!
-
-    comment(ById: ID!): CommentResult!
-    comments(commented_before: String,
-          commented_after: String,
-          updated_before: String, 
-          updated_after: String): CommentsResult!
-
-    account(ById: ID!): AccountResult!
-    accounts(created_before: String,
-          created_after: String,
-          updated_before: String, 
-          updated_after: String): AccountsResult!
-
-    subreddit(ById: ID!): SubredditResult!
-    subreddits(created_before: String,
-          created_after: String,
-          updated_before: String, 
-          updated_after: String): SubredditsResult!
-}
-
-type DeletePostResult {
+type SubredditDetailResult {
     success: Boolean!
     errors: [String]
+    subredditdetail: SubredditDetail
+}
+
+type SubredditDetailsResult {
+    success: Boolean!
+    errors: [String]
+    subredditdetails: [SubredditDetail]
+}
+
+type Query {
+    post(byId: ID!): PostResult!
+    postdetail(byId: ID!): PostDetailResult!
+    postdetails(zen_unique_id: Int, zen_post_id: Int): PostDetailsResult!
+    posts(postedBefore: String,
+          postedAfter: String,
+          updatedBefore: String, 
+          updatedAfter: String,
+          orderBy: OrderByInput): PostsResult!
+
+    comment(byId: ID!): CommentResult!
+    commentdetail(byId: ID!): CommentDetailResult!
+    commentdetails(zen_unique_id: Int, zen_comment_id: Int): CommentDetailsResult!
+    comments(commentedBefore: String,
+          commentedAfter: String,
+          updatedBefore: String, 
+          updatedAfter: String,
+          orderBy: OrderByInput): CommentsResult!
+
+    account(byId: ID!): AccountResult!
+    accountdetail(byId: ID!): AccountDetailResult!
+    accountdetails(zen_unique_id: Int, zen_account_id: Int): AccountDetailsResult!
+    accounts(createdBefore: String,
+          createdAfter: String,
+          updatedBefore: String, 
+          updatedAfter: String,
+          orderBy: OrderByInput): AccountsResult!
+
+    subreddit(byId: ID!): SubredditResult!
+    subredditdetail(byId: ID!): SubredditDetailResult!
+    subredditdetails(zen_unique_id: Int, zen_subreddit_id: Int): SubredditDetailsResult!
+    subreddits(createdBefore: String,
+          createdAfter: String,
+          updatedBefore: String, 
+          updatedAfter: String,
+          orderBy: OrderByInput): SubredditsResult!
+}
+
+type Mutation {
+    createComment(
+        zen_comment_id : ID!
+        zen_post_id : Int!
+        zen_subreddit_id : Int!
+        zen_account_id : Int
+        reddit_comment_id : String!
+        reddit_parent_id : String!
+        reddit_post_id : String!
+        reddit_subreddit_id : String!
+        reddit_account_id : String
+        created_utc : Float
+        depth : Int
+        permalink : String
+        is_submitter : Boolean
+        created : Float
+        # zen_comment_detail_id = Column(ForeignKey('comments.comment_versions.zen_comment_detail_id'), primary_key=True, index=True)
+        # zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+        # controversiality = Column(BigInteger)
+        # ups = Column(BigInteger)
+        # downs = Column(BigInteger)
+        # score = Column(BigInteger)
+        # body = Column(Text)
+        # edited = Column(BigInteger)
+        # author_cakeday = Column(Boolean)
+        # author_has_subscribed = Column(Boolean)
+        # author_is_mod = Column(Boolean)
+        # comment_type = Column(Text)
+        # author_flair_type = Column(Text)
+        # total_awards_received = Column(BigInteger)
+        # author_flair_template_id = Column(Text)
+        # mod_reason_title = Column(Text)
+        # gilded = Column(BigInteger)
+        # archived = Column(Boolean)
+        # collapsed_reason_code = Column(Text)
+        # no_follow = Column(Boolean)
+        # can_mod_post = Column(Boolean)
+        # send_replies = Column(Boolean)
+        # mod_note = Column(Text)
+        # collapsed = Column(Boolean)
+        # top_awarded_type = Column(Text)
+        # author_flair_css_class = Column(Text)
+        # author_patreon_flair = Column(Boolean)
+        # body_html = Column(Text)
+        # removal_reason = Column(Text)
+        # collapsed_reason = Column(Text)
+        # distinguished = Column(Text)
+        # associated_award = Column(Text)
+        # stickied = Column(Boolean)
+        # author_premium = Column(Boolean)
+        # can_gild = Column(Boolean)
+        # unrepliable_reason = Column(Text)
+        # author_flair_text_color = Column(Text)
+        # score_hidden = Column(Boolean)
+        # subreddit_type = Column(Text)
+        # locked = Column(Boolean)
+        # report_reasons = Column(Text)
+        # author_flair_text = Column(Text)
+        # author_flair_background_color = Column(Text)
+        # collapsed_because_crowd_control = Column(Text)
+        ): CommentResult!
 }
 
 
