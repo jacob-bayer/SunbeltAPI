@@ -21,9 +21,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+from sunbelt import db
+target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -51,8 +50,10 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
     )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    # I had to comment out the transaction block to get this to work
+    # https://stackoverflow.com/a/64282372/11477615
+    #with context.begin_transaction():
+    context.run_migrations()
 
 
 def run_migrations_online() -> None:
@@ -73,8 +74,10 @@ def run_migrations_online() -> None:
             connection=connection, target_metadata=target_metadata
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        # I had to comment out the transaction block to get this to work
+        # https://stackoverflow.com/a/64282372/11477615
+        #with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():

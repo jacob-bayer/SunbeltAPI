@@ -4,6 +4,10 @@ from sunbelt import db
 from sqlalchemy.orm import relationship, reconstructor
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Index, Integer, Text, text, Numeric
 
+# used for sorting by properties
+# https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
+from sqlalchemy.ext.hybrid import hybrid_property
+
 
 class Subreddit(db.Model):
     __tablename__ = 'subreddits'
@@ -25,11 +29,11 @@ class Subreddit(db.Model):
     posts = relationship('Post', back_populates='subreddit')
     versions = relationship('SubredditVersion', back_populates='subreddit')
 
-    @property
+    @hybrid_property
     def reddit_unique_id(self):
         return self.reddit_subreddit_id
 
-    @property
+    @hybrid_property
     def zen_unique_id(self):
         return self.zen_subreddit_id
 
@@ -64,6 +68,13 @@ class SubredditVersion(db.Model):
     subreddit = relationship('Subreddit', back_populates='versions')
     detail = relationship('SubredditDetail', uselist = False, back_populates='version')
 
+    @hybrid_property
+    def zen_unique_id(self):
+        return self.zen_subreddit_id
+
+    @hybrid_property
+    def zen_version_id(self):
+        return self.zen_subreddit_version_id
 
 class SubredditDetail(db.Model):
     __tablename__ = 'subreddit_details'
@@ -145,6 +156,10 @@ class SubredditDetail(db.Model):
     videostream_links_count = Column(Float(53))
 
     version = relationship('SubredditVersion', back_populates='detail')
+
+    @hybrid_property
+    def zen_detail_id(self):
+        return self.zen_subreddit_detail_id
 
     def to_dict(self):
         return {
@@ -229,11 +244,11 @@ class Post(db.Model):
     author = relationship('Account', back_populates='posts')
     versions = relationship('PostVersion', back_populates='post')
 
-    @property
+    @hybrid_property
     def reddit_unique_id(self):
         return self.reddit_post_id
 
-    @property
+    @hybrid_property
     def zen_unique_id(self):
         return self.zen_post_id
 
@@ -293,6 +308,14 @@ class PostVersion(db.Model):
 
     post = relationship('Post', back_populates='versions')
     detail = relationship('PostDetail', uselist=False, back_populates='version')
+
+    @hybrid_property
+    def zen_unique_id(self):
+        return self.zen_post_id
+
+    @hybrid_property
+    def zen_version_id(self):
+        return self.zen_post_version_id
 
 
 class PostDetail(db.Model):
@@ -379,13 +402,17 @@ class PostDetail(db.Model):
     author_flair_text_color = Column(Text)
     link_flair_template_id = Column(Text)
 
-    awardings = relationship('PostAwarding', back_populates='detail')
-    gildings = relationship('PostGilding', back_populates='detail')
-    media = relationship('PostMedia', back_populates='detail')
-    media_embeds = relationship('PostMediaEmbed', back_populates='detail')
-    secure_media = relationship('PostSecureMedia', back_populates='detail')
+    # awardings = relationship('PostAwarding', back_populates='detail')
+    # gildings = relationship('PostGilding', back_populates='detail')
+    # media = relationship('PostMedia', back_populates='detail')
+    # media_embeds = relationship('PostMediaEmbed', back_populates='detail')
+    # secure_media = relationship('PostSecureMedia', back_populates='detail')
 
     version = relationship('PostVersion', back_populates='detail')
+
+    @hybrid_property
+    def zen_detail_id(self):
+        return self.zen_post_detail_id
 
     def to_dict(self):
         return {
@@ -404,141 +431,141 @@ class PostDetail(db.Model):
         }
     
 
-class PostAwarding(db.Model):
-    __tablename__ = 'awardings'
-    __table_args__ = {'schema': 'posts'}
+# class PostAwarding(db.Model):
+#     __tablename__ = 'awardings'
+#     __table_args__ = {'schema': 'posts'}
 
-    zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    reddit_subreddit_id = Column(Text)
-    giver_coin_reward = Column(Text)
-    is_new = Column(Boolean)
-    days_of_drip_extension = Column(Float(53))
-    coin_price = Column(BigInteger)
-    id = Column(Text)
-    penny_donate = Column(Text)
-    coin_reward = Column(BigInteger)
-    icon_url = Column(Text)
-    days_of_premium = Column(Float(53))
-    icon_height = Column(BigInteger)
-    icon_width = Column(BigInteger)
-    static_icon_width = Column(BigInteger)
-    start_date = Column(Float(53))
-    is_enabled = Column(Boolean)
-    awardings_required_to_grant_benefits = Column(Float(53))
-    description = Column(Text)
-    end_date = Column(Float(53))
-    sticky_duration_seconds = Column(Text)
-    subreddit_coin_reward = Column(BigInteger)
-    count = Column(BigInteger)
-    static_icon_height = Column(BigInteger)
-    name = Column(Text)
-    icon_format = Column(Text)
-    award_sub_type = Column(Text)
-    penny_price = Column(Float(53))
-    award_type = Column(Text)
-    static_icon_url = Column(Text)
+#     zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     reddit_subreddit_id = Column(Text)
+#     giver_coin_reward = Column(Text)
+#     is_new = Column(Boolean)
+#     days_of_drip_extension = Column(Float(53))
+#     coin_price = Column(BigInteger)
+#     id = Column(Text)
+#     penny_donate = Column(Text)
+#     coin_reward = Column(BigInteger)
+#     icon_url = Column(Text)
+#     days_of_premium = Column(Float(53))
+#     icon_height = Column(BigInteger)
+#     icon_width = Column(BigInteger)
+#     static_icon_width = Column(BigInteger)
+#     start_date = Column(Float(53))
+#     is_enabled = Column(Boolean)
+#     awardings_required_to_grant_benefits = Column(Float(53))
+#     description = Column(Text)
+#     end_date = Column(Float(53))
+#     sticky_duration_seconds = Column(Text)
+#     subreddit_coin_reward = Column(BigInteger)
+#     count = Column(BigInteger)
+#     static_icon_height = Column(BigInteger)
+#     name = Column(Text)
+#     icon_format = Column(Text)
+#     award_sub_type = Column(Text)
+#     penny_price = Column(Float(53))
+#     award_type = Column(Text)
+#     static_icon_url = Column(Text)
 
-    detail = relationship('PostDetail', back_populates='awardings')
-
-
-class PostGilding(db.Model):
-    __tablename__ = 'gildings'
-    __table_args__ = {'schema': 'posts'}
-
-    zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    reddit_gid = Column(Text)
-    value = Column(BigInteger)
-
-    detail = relationship('PostDetail', back_populates='gildings')
+#     detail = relationship('PostDetail', back_populates='awardings')
 
 
-class PostMedia(db.Model):
-    __tablename__ = 'media'
-    __table_args__ = {'schema': 'posts'}
+# class PostGilding(db.Model):
+#     __tablename__ = 'gildings'
+#     __table_args__ = {'schema': 'posts'}
 
-    zen_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    media_type = Column(Text)
-    oembed_provider_url = Column(Text)
-    oembed_version = Column(Text)
-    oembed_title = Column(Text)
-    oembed_type = Column(Text)
-    oembed_thumbnail_width = Column(Float(53))
-    oembed_height = Column(Float(53))
-    oembed_width = Column(Float(53))
-    oembed_html = Column(Text)
-    oembed_author_name = Column(Text)
-    oembed_provider_name = Column(Text)
-    oembed_thumbnail_url = Column(Text)
-    oembed_thumbnail_height = Column(Float(53))
-    oembed_author_url = Column(Text)
-    reddit_video_fallback_url = Column(Text)
-    reddit_video_bitrate_kbps = Column(Float(53))
-    reddit_video_height = Column(Float(53))
-    reddit_video_width = Column(Float(53))
-    reddit_video_scrubber_media_url = Column(Text)
-    reddit_video_dash_url = Column(Text)
-    reddit_video_duration = Column(Float(53))
-    reddit_video_hls_url = Column(Text)
-    reddit_video_is_gif = Column(Boolean)
-    reddit_video_transcoding_status = Column(Text)
+#     zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     reddit_gid = Column(Text)
+#     value = Column(BigInteger)
 
-    detail = relationship('PostDetail', back_populates='media')
+#     detail = relationship('PostDetail', back_populates='gildings')
 
 
-class PostMediaEmbed(db.Model):
-    __tablename__ = 'media_embed'
-    __table_args__ = {'schema': 'posts'}
+# class PostMedia(db.Model):
+#     __tablename__ = 'media'
+#     __table_args__ = {'schema': 'posts'}
 
-    zen_media_embed_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    content = Column(Text)
-    width = Column(Float(53))
-    scrolling = Column(Boolean)
-    height = Column(Float(53))
+#     zen_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     media_type = Column(Text)
+#     oembed_provider_url = Column(Text)
+#     oembed_version = Column(Text)
+#     oembed_title = Column(Text)
+#     oembed_type = Column(Text)
+#     oembed_thumbnail_width = Column(Float(53))
+#     oembed_height = Column(Float(53))
+#     oembed_width = Column(Float(53))
+#     oembed_html = Column(Text)
+#     oembed_author_name = Column(Text)
+#     oembed_provider_name = Column(Text)
+#     oembed_thumbnail_url = Column(Text)
+#     oembed_thumbnail_height = Column(Float(53))
+#     oembed_author_url = Column(Text)
+#     reddit_video_fallback_url = Column(Text)
+#     reddit_video_bitrate_kbps = Column(Float(53))
+#     reddit_video_height = Column(Float(53))
+#     reddit_video_width = Column(Float(53))
+#     reddit_video_scrubber_media_url = Column(Text)
+#     reddit_video_dash_url = Column(Text)
+#     reddit_video_duration = Column(Float(53))
+#     reddit_video_hls_url = Column(Text)
+#     reddit_video_is_gif = Column(Boolean)
+#     reddit_video_transcoding_status = Column(Text)
 
-    detail = relationship('PostDetail', back_populates='media_embeds')
+#     detail = relationship('PostDetail', back_populates='media')
 
 
-class PostSecureMedia(db.Model):
-    __tablename__ = 'secure_media'
-    __table_args__ = {'schema': 'posts'}
+# class PostMediaEmbed(db.Model):
+#     __tablename__ = 'media_embed'
+#     __table_args__ = {'schema': 'posts'}
 
-    zen_secure_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    type = Column(Text)
-    oembed_provider_url = Column(Text)
-    oembed_version = Column(Text)
-    oembed_title = Column(Text)
-    oembed_type = Column(Text)
-    oembed_thumbnail_width = Column(Float(53))
-    oembed_height = Column(Float(53))
-    oembed_width = Column(Float(53))
-    oembed_html = Column(Text)
-    oembed_author_name = Column(Text)
-    oembed_provider_name = Column(Text)
-    oembed_thumbnail_url = Column(Text)
-    oembed_thumbnail_height = Column(Float(53))
-    oembed_author_url = Column(Text)
-    reddit_video_bitrate_kbps = Column(Float(53))
-    reddit_video_fallback_url = Column(Text)
-    reddit_video_height = Column(Float(53))
-    reddit_video_width = Column(Float(53))
-    reddit_video_scrubber_media_url = Column(Text)
-    reddit_video_dash_url = Column(Text)
-    reddit_video_duration = Column(Float(53))
-    reddit_video_hls_url = Column(Text)
-    reddit_video_is_gif = Column(Boolean)
-    reddit_video_transcoding_status = Column(Text)
+#     zen_media_embed_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     content = Column(Text)
+#     width = Column(Float(53))
+#     scrolling = Column(Boolean)
+#     height = Column(Float(53))
 
-    detail = relationship('PostDetail', back_populates='secure_media')
+#     detail = relationship('PostDetail', back_populates='media_embeds')
+
+
+# class PostSecureMedia(db.Model):
+#     __tablename__ = 'secure_media'
+#     __table_args__ = {'schema': 'posts'}
+
+#     zen_secure_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     type = Column(Text)
+#     oembed_provider_url = Column(Text)
+#     oembed_version = Column(Text)
+#     oembed_title = Column(Text)
+#     oembed_type = Column(Text)
+#     oembed_thumbnail_width = Column(Float(53))
+#     oembed_height = Column(Float(53))
+#     oembed_width = Column(Float(53))
+#     oembed_html = Column(Text)
+#     oembed_author_name = Column(Text)
+#     oembed_provider_name = Column(Text)
+#     oembed_thumbnail_url = Column(Text)
+#     oembed_thumbnail_height = Column(Float(53))
+#     oembed_author_url = Column(Text)
+#     reddit_video_bitrate_kbps = Column(Float(53))
+#     reddit_video_fallback_url = Column(Text)
+#     reddit_video_height = Column(Float(53))
+#     reddit_video_width = Column(Float(53))
+#     reddit_video_scrubber_media_url = Column(Text)
+#     reddit_video_dash_url = Column(Text)
+#     reddit_video_duration = Column(Float(53))
+#     reddit_video_hls_url = Column(Text)
+#     reddit_video_is_gif = Column(Boolean)
+#     reddit_video_transcoding_status = Column(Text)
+
+#     detail = relationship('PostDetail', back_populates='secure_media')
     
 class Account(db.Model):
     __tablename__ = 'accounts'
@@ -554,11 +581,11 @@ class Account(db.Model):
     posts = relationship('Post', back_populates='author')
     versions = relationship('AccountVersion', back_populates='account')
 
-    @property
+    @hybrid_property
     def reddit_unique_id(self):
         return self.reddit_account_id
 
-    @property
+    @hybrid_property
     def zen_unique_id(self):
         return self.zen_account_id
 
@@ -590,6 +617,14 @@ class AccountVersion(db.Model):
     account = relationship('Account', back_populates='versions')
     detail = relationship('AccountDetail', uselist = False, back_populates='version')
 
+    @hybrid_property
+    def zen_unique_id(self):
+        return self.zen_account_id
+
+    @hybrid_property
+    def zen_version_id(self):
+        return self.zen_account_version_id
+
 class AccountDetail(db.Model):
     __tablename__ = 'account_details'
     __table_args__ = {'schema': 'accounts'}
@@ -615,6 +650,9 @@ class AccountDetail(db.Model):
 
     version = relationship('AccountVersion', back_populates='detail')
 
+    @hybrid_property
+    def zen_detail_id(self):
+        return self.zen_account_detail_id
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -625,7 +663,7 @@ class Comment(db.Model):
     zen_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.zen_subreddit_id'), nullable=False)
     zen_account_id = Column(BigInteger, ForeignKey('accounts.accounts.zen_account_id'))
     reddit_comment_id = Column(Text, nullable=False)
-    reddit_parent_id = Column(Text, nullable=False)
+    reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
@@ -644,16 +682,21 @@ class Comment(db.Model):
 
     @property
     def parent(self):
-        if self.reddit_parent_id.startswith('t1_'):
-            return Comment.query.filter(Comment.reddit_comment_id == self.reddit_parent_id).first()
+        if self.reddit_parent_id:
+            if self.reddit_parent_id.startswith('t1_'):
+                return Comment.query.filter(Comment.reddit_comment_id == self.reddit_parent_id).first()
+            else:
+                return Post.query.filter(Post.reddit_post_id == self.reddit_parent_id).first()
         else:
-            return Post.query.filter(Post.reddit_post_id == self.reddit_parent_id).first()
+            return None
     
-    @property
+    @hybrid_property
     def reddit_unique_id(self):
         return self.reddit_comment_id
 
-    @property
+    # allows sort by this
+    # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
+    @hybrid_property
     def zen_unique_id(self):
         return self.zen_comment_id
 
@@ -699,6 +742,14 @@ class CommentVersion(db.Model):
 
     comment = relationship('Comment', back_populates='versions')
     detail = relationship('CommentDetail', uselist=False, back_populates='version')
+
+    @hybrid_property
+    def zen_unique_id(self):
+        return self.zen_comment_id
+
+    @hybrid_property
+    def zen_version_id(self):
+        return self.zen_comment_version_id
 
 class CommentDetail(db.Model):
     __tablename__ = 'comment_details'
@@ -749,10 +800,14 @@ class CommentDetail(db.Model):
     author_flair_background_color = Column(Text)
     collapsed_because_crowd_control = Column(Text)
 
-    awardings = relationship('CommentAwarding', back_populates='detail')
-    gildings = relationship('CommentGilding', back_populates='detail')
+    # awardings = relationship('CommentAwarding', back_populates='detail')
+    # gildings = relationship('CommentGilding', back_populates='detail')
 
     version = relationship('CommentVersion', back_populates='detail')
+
+    @hybrid_property
+    def zen_detail_id(self):
+        return self.zen_comment_detail_id
 
     def to_dict(self):
         return {
@@ -804,52 +859,51 @@ class CommentDetail(db.Model):
         }
 
 
-class CommentAwarding(db.Model):
-    __tablename__ = 'awardings'
-    __table_args__ = {'schema': 'comments'}
+# class CommentAwarding(db.Model):
+#     __tablename__ = 'awardings'
+#     __table_args__ = {'schema': 'comments'}
 
-    zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    giver_coin_reward = Column(Text)
-    is_new = Column(Boolean)
-    days_of_drip_extension = Column(Text)
-    coin_price = Column(BigInteger)
-    penny_donate = Column(Text)
-    coin_reward = Column(BigInteger)
-    icon_url = Column(Text)
-    days_of_premium = Column(Numeric)
-    icon_height = Column(BigInteger)
-    icon_width = Column(BigInteger)
-    static_icon_width = Column(BigInteger)
-    start_date = Column(Numeric)
-    is_enabled = Column(Boolean)
-    awardings_required_to_grant_benefits = Column(Numeric)
-    description = Column(Text)
-    end_date = Column(Text)
-    sticky_duration_seconds = Column(Text)
-    subreddit_coin_reward = Column(BigInteger)
-    count = Column(BigInteger)
-    static_icon_height = Column(BigInteger)
-    name = Column(Text)
-    icon_format = Column(Text)
-    award_sub_type = Column(Text)
-    penny_price = Column(Numeric)
-    award_type = Column(Text)
-    static_icon_url = Column(Text)
+#     zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     giver_coin_reward = Column(Text)
+#     is_new = Column(Boolean)
+#     days_of_drip_extension = Column(Text)
+#     coin_price = Column(BigInteger)
+#     penny_donate = Column(Text)
+#     coin_reward = Column(BigInteger)
+#     icon_url = Column(Text)
+#     days_of_premium = Column(Numeric)
+#     icon_height = Column(BigInteger)
+#     icon_width = Column(BigInteger)
+#     static_icon_width = Column(BigInteger)
+#     start_date = Column(Numeric)
+#     is_enabled = Column(Boolean)
+#     awardings_required_to_grant_benefits = Column(Numeric)
+#     description = Column(Text)
+#     end_date = Column(Text)
+#     sticky_duration_seconds = Column(Text)
+#     subreddit_coin_reward = Column(BigInteger)
+#     count = Column(BigInteger)
+#     static_icon_height = Column(BigInteger)
+#     name = Column(Text)
+#     icon_format = Column(Text)
+#     award_sub_type = Column(Text)
+#     penny_price = Column(Numeric)
+#     award_type = Column(Text)
+#     static_icon_url = Column(Text)
 
-    detail = relationship('CommentDetail', back_populates='awardings')
+#     detail = relationship('CommentDetail', back_populates='awardings')
 
 
-class CommentGilding(db.Model):
-    __tablename__ = 'gildings'
-    __table_args__ = {'schema': 'comments'}
+# class CommentGilding(db.Model):
+#     __tablename__ = 'gildings'
+#     __table_args__ = {'schema': 'comments'}
 
-    zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-    zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    reddit_gid = Column(Text)
-    value = Column(Numeric)
+#     zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
+#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     reddit_gid = Column(Text)
+#     value = Column(Numeric)
 
-    detail = relationship('CommentDetail', back_populates='gildings')
-
+#     detail = relationship('CommentDetail', back_populates='gildings')

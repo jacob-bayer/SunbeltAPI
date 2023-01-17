@@ -1,26 +1,27 @@
 #! ./venv/bin/python3
 # -*- coding: utf-8 -*-
 
-import praw
+import json
 from os import environ
-from dotenv import load_dotenv
-#from database_helpers.praw_output_cleaner import insert_praw_object         
 import logging
 import argparse
 from datetime import datetime, timedelta
+import pytz
+
+import praw
+from dotenv import load_dotenv
+#from database_helpers.praw_output_cleaner import insert_praw_object         
+
 #from static import HOURS_TO_WAIT_DICT
 HOURS_TO_WAIT_DICT = {'subreddit': 24,
                         'account': 24,
                         'post': 1,
                         'comment': 0.25}
 
-import pytz
+
 from SAWP import SunbeltClient
-import pandas as pd
-from database_helpers.praw_output_cleaner import (
-                        clean_and_normalize,
-                        insert_from_cleaned_frames,
-                        SchemaConfig)
+from praw_cleaner.praw_to_dict import praw_to_dict
+
 
 east_time = pytz.timezone('US/Eastern')
 
@@ -102,14 +103,7 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
             identifier = zen_obj.reddit_unique_id
 
         praw_object = praw_func(identifier)
-        praw_object._fetch()
-        obj_vars = vars(praw_object)
-        obj_vars[f'zen_{kind}_id'] = zen_obj.zen_unique_id
-        obj_vars[f'zen_{kind}_version_id'] = zen_obj.most_recent_zen_version_id + 1
-        obj_vars[f'zen_{kind}_detail_id'] = max(sunbelt.post_details.zen_detail_id) + 1
-        df = pd.DataFrame([obj_vars]).set_index(f'zen_{kind}_detail_id')
-        cleaned_frames, _ = clean_and_normalize(df, kind + 's')
-        insert_from_cleaned_frames(cleaned_frames, SchemaConfig(kind + 's'))
-        
-    
+        praw_dict = praw_to_dict(praw_object)
+        praw_json = json.dumps(praw_dict)
 
+        sunbelt.mutation('createComment', praw_json)
