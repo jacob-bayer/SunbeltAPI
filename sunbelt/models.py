@@ -37,8 +37,12 @@ class Subreddit(db.Model):
     def zen_unique_id(self):
         return self.zen_subreddit_id
 
+    @property
+    def most_recent_detail(self):
+        return self.versions[-1].detail
+
     def to_dict(self):
-        return {
+        main_dict = {
             'zen_subreddit_id': self.zen_subreddit_id,
             'reddit_unique_id' : self.reddit_unique_id,
             'zen_unique_id' : self.zen_unique_id,
@@ -52,6 +56,9 @@ class Subreddit(db.Model):
             'lang': self.lang,
             'created_utc': self.created_utc,
         }
+        most_recent_details_dict = {'most_recent_' + key: value for key, value in self.most_recent_detail.to_dict().items()}
+        return {**main_dict, **most_recent_details_dict}
+    
 
 class SubredditVersion(db.Model):
     __tablename__ = 'subreddit_versions'
@@ -589,11 +596,15 @@ class Account(db.Model):
     def zen_unique_id(self):
         return self.zen_account_id
 
+    @property
+    def most_recent_detail(self):
+        return self.versions[-1].detail
+
     def __repr__(self):
         return f'ZenAccount({self.zen_account_id})'
 
     def to_dict(self):
-        return {
+        main_dict = {
             'zen_account_id': self.zen_account_id,
             'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'name': self.name,
@@ -601,6 +612,8 @@ class Account(db.Model):
             'reddit_unique_id': self.reddit_unique_id,
             'zen_unique_id': self.zen_unique_id
         }
+        most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        return {**main_dict, **most_recent_detail_dict}
 
 class AccountVersion(db.Model):
     __tablename__ = 'account_versions'
@@ -653,6 +666,28 @@ class AccountDetail(db.Model):
     @hybrid_property
     def zen_detail_id(self):
         return self.zen_account_detail_id
+
+    def to_dict(self):
+        return {
+            'zen_account_detail_id': self.zen_account_detail_id,
+            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'comment_karma': self.comment_karma,
+            'link_karma': self.link_karma,
+            'total_karma': self.total_karma,
+            'awardee_karma': self.awardee_karma,
+            'awarder_karma': self.awarder_karma,
+            'listing_use_sort': self.listing_use_sort,
+            'is_employee': self.is_employee,
+            'snoovatar_size': self.snoovatar_size,
+            'verified': self.verified,
+            'is_gold': self.is_gold,
+            'icon_img': self.icon_img,
+            'hide_from_robots': self.hide_from_robots,
+            'pref_show_snoovatar': self.pref_show_snoovatar,
+            'snoovatar_img': self.snoovatar_img,
+            'accept_followers': self.accept_followers,
+            #'has_verified_email': self.has_verified_email
+        }
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -817,20 +852,20 @@ class CommentDetail(db.Model):
             "zen_version_id" : self.version.zen_comment_version_id,
             'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'controversiality': str(self.controversiality) or '',
-            'ups': str(self.ups) or '',
-            'downs': str(self.downs) or '',
-            'score': str(self.score) or '',
+            'ups': self.ups,
+            'downs': self.downs,
+            'score': self.score,
             'body': self.body,
-            'edited': str(self.edited) or '',
+            'edited': self.edited,
             'author_cakeday': self.author_cakeday,
             'author_has_subscribed': self.author_has_subscribed,
             'author_is_mod': self.author_is_mod,
             'comment_type': self.comment_type,
             'author_flair_type': self.author_flair_type,
-            'total_awards_received': str(self.total_awards_received) or '',
+            'total_awards_received': self.total_awards_received,
             'author_flair_template_id': self.author_flair_template_id,
             'mod_reason_title': self.mod_reason_title,
-            'gilded': str(self.gilded) or '',
+            'gilded': self.gilded,
             'archived': self.archived,
             'collapsed_reason_code': self.collapsed_reason_code,
             'no_follow': self.no_follow,

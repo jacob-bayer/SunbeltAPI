@@ -27,6 +27,14 @@ type Subreddit {
     created: Float
     lang: String
     created_utc: Float
+    most_recent_zen_version_id: Int
+    most_recent_zen_detail_id: Int
+    most_recent_zen_created_at: String
+    most_recent_active_user_count: Int
+    most_recent_accounts_active: Int
+    most_recent_public_traffic: Boolean
+    most_recent_subscribers: Int
+
 }
 
 type SubredditDetail {
@@ -61,6 +69,11 @@ type Post {
     versions : [PostDetail]
     zen_created_at : String
     most_recent_detail : PostDetail
+    most_recent_ups : Int
+    most_recent_downs : Int
+    most_recent_score : Int
+    most_recent_upvote_ratio : Float
+    most_recent_created_utc : Float
 }
 
 type PostDetail {
@@ -101,11 +114,11 @@ type Comment {
     most_recent_zen_version_id: Int,
     most_recent_zen_created_at: String,
     most_recent_controversiality: String,
-    most_recent_ups: String,
-    most_recent_downs: String,
-    most_recent_score: String,
+    most_recent_ups: Int,
+    most_recent_downs: Int,
+    most_recent_score: Int,
     most_recent_body: String,
-    most_recent_edited: String,
+    most_recent_edited: Int,
     most_recent_author_cakeday: Boolean,
     most_recent_author_has_subscribed: Boolean,
     most_recent_author_is_mod: Boolean,
@@ -162,6 +175,21 @@ type Account {
     zen_unique_id: Int
     name: String
     reddit_account_id: String
+    most_recent_zen_version_id: Int
+    most_recent_zen_detail_id: Int
+    most_recent_zen_created_at: String
+    most_recent_comment_karma: Int
+    most_recent_link_karma: Int
+    most_recent_total_karma: Int
+    most_recent_awardee_karma: Int
+    most_recent_awarder_karma: Int
+    most_recent_listing_use_sort: Boolean
+    most_recent_is_employee: Boolean
+    most_recent_snoovatar_size: String
+    most_recent_verified: Boolean
+    most_recent_is_gold: Boolean
+    most_recent_icon_img: String
+    most_recent_hide_from_robots: Boolean
 }
 
 type AccountDetail {

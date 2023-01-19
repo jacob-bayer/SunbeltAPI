@@ -343,7 +343,6 @@ def resolve_accounts(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_account(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
-
     try:
         account = Account.query.get(by_id)
         payload = {

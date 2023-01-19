@@ -79,6 +79,8 @@ sunbelt_funcs = {
     }
 
 for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
+    write_list = []
+    
     sunbelt_func = sunbelt_funcs[kind]
     
     age_cutoff = now_et - timedelta(hours=hours_to_wait)
@@ -89,21 +91,45 @@ for kind, hours_to_wait in HOURS_TO_WAIT_DICT.items():
     zen_objs = sunbelt_func.all(updatedBefore = age_cutoff)
 
     zen_objs = list(zen_objs)
-
-    log.info(f" Updating {len(zen_objs)} {kind}s")
     
     praw_func = praw_funcs[kind]
-
+    
     for zen_obj in zen_objs:
-        if kind == 'subreddits':
+        
+        is_subreddit = kind == 'subreddit'
+        is_account = kind == 'account'
+        is_comment = kind == 'comment'
+        is_post = kind == 'post'
+        
+        if is_subreddit:
             identifier = zen_obj.display_name
-        elif kind == 'accounts':
+        elif is_account:
             identifier = zen_obj.name
         else:
-            identifier = zen_obj.reddit_unique_id
+            identifier = zen_obj.reddit_unique_id.split('_')[1]
 
         praw_object = praw_func(identifier)
         praw_dict = praw_to_dict(praw_object)
         praw_json = json.dumps(praw_dict)
-
-        sunbelt.mutation('createComment', praw_json)
+        
+        if is_comment or is_post:
+            thresh = min(praw_object.ups*.05,100)
+            diff = zen_obj.most_recent_ups - praw_object.ups
+        elif is_subreddit:
+            thresh = min(praw_object.subscribers*.01,1000)
+            diff = zen_obj.most_recent_subscribers - praw_object.subscribers
+        elif is_account:
+            thresh = min(praw_object.total_karma*.01,100)
+            diff = zen_obj.most_recent_total_karma - praw_object.total_karma
+        
+        should_write = diff > thresh
+        if should_write:
+            write_list += praw_json
+        
+    
+    if len(write_list):
+        log.info(f' Updating {len(write_list)} {kind}s')
+    
+    for praw_json in write_list:
+        mutation_type = f'create{kind.title()}'
+        sunbelt.mutation(mutation_type, praw_json)
