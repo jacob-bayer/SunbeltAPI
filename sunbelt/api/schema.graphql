@@ -313,7 +313,7 @@ type SubredditDetailsResult {
 }
 
 type Query {
-    post(byId: ID!): PostResult!
+    post(byId: ID, reddit_id: String): PostResult!
     postdetail(byId: ID!): PostDetailResult!
     postdetails(zen_unique_id: Int, zen_post_id: Int): PostDetailsResult!
     posts(postedBefore: String,
@@ -322,7 +322,7 @@ type Query {
           updatedAfter: String,
           orderBy: OrderByInput): PostsResult!
 
-    comment(byId: ID!): CommentResult!
+    comment(byId: ID, reddit_id: String): CommentResult!
     commentdetail(byId: ID!): CommentDetailResult!
     commentdetails(zen_unique_id: Int, zen_comment_id: Int): CommentDetailsResult!
     comments(commentedBefore: String,
@@ -331,7 +331,7 @@ type Query {
           updatedAfter: String,
           orderBy: OrderByInput): CommentsResult!
 
-    account(byId: ID!): AccountResult!
+    account(byId: ID, reddit_id: String): AccountResult!
     accountdetail(byId: ID!): AccountDetailResult!
     accountdetails(zen_unique_id: Int, zen_account_id: Int): AccountDetailsResult!
     accounts(createdBefore: String,
@@ -340,7 +340,7 @@ type Query {
           updatedAfter: String,
           orderBy: OrderByInput): AccountsResult!
 
-    subreddit(byId: ID!): SubredditResult!
+    subreddit(byId: ID, reddit_id: String): SubredditResult!
     subredditdetail(byId: ID!): SubredditDetailResult!
     subredditdetails(zen_unique_id: Int, zen_subreddit_id: Int): SubredditDetailsResult!
     subreddits(createdBefore: String,

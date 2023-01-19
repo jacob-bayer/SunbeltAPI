@@ -68,17 +68,24 @@ def create_object(kind, from_dict):
 
     # The zen ids for higher level objects must be added to the dictionary first
     if kind in ['post','comment']:
+
         if kind == 'post':
+            from_dict['removed'] = from_dict['selftext'] == '[removed]'
+            from_dict['deleted'] = from_dict['selftext'] == '[deleted]'
+            
             subreddit = from_dict['subreddit']
             create_object('subreddit', subreddit)
             from_dict['zen_subreddit_id'] = subreddit['zen_subreddit_id']
 
-        if 'author' in from_dict:
-            author = from_dict['author']
+        author = from_dict.get('author')
+        if author:
             create_object('account', author)
             from_dict['zen_account_id'] = author['zen_account_id']
 
         if kind == 'comment':
+            from_dict['removed'] = from_dict['body'] == '[removed]'
+            from_dict['deleted'] = from_dict['body'] == '[deleted]'
+
             post = from_dict['post']
             create_object('post', post)
             from_dict['zen_post_id'] = post['zen_post_id']

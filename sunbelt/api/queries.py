@@ -77,18 +77,34 @@ def resolve_posts(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_post(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
+    reddit_id = kwargs.get('reddit_id')
+    errors = []
 
-    try:
+    if by_id and reddit_id:
+        errors += ["Cannot specify both by_id and reddit_id"]
+
+    if by_id:
         post = Post.query.get(by_id)
+        if not post:
+            errors += [f"No posts found with zen id {by_id}"]
+    if reddit_id:
+        post = Post.query.filter_by(reddit_post_id=reddit_id).all()
+        if len(post) > 1:
+            errors += [f"Multiple posts found with reddit_id {reddit_id}"]
+        elif len(post) == 0: 
+            errors += [f"No posts found with reddit_id {reddit_id}"]
+        else:
+            post = post[0]
+
+    if not errors:
         payload = {
             "success": True,
             "post": post.to_dict()
         }
-
-    except AttributeError:  # post not found
+    else:
         payload = {
             "success": False,
-            "errors": [f"Post item matching id {by_id} not found"]
+            "errors": errors
         }
 
     return payload
@@ -211,18 +227,31 @@ def resolve_comments(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_comment(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
+    reddit_id = kwargs.get('reddit_id')
+    errors = []
 
-    try:
+    if by_id:
         comment = Comment.query.get(by_id)
+        if not comment:
+            errors += [f"No comments found with zen id {by_id}"]
+    if reddit_id:
+        comment = Comment.query.filter_by(reddit_comment_id=reddit_id).all()
+        if len(comment) > 1:
+            errors += [f"Multiple comments found with reddit_id {reddit_id}"]
+        elif len(comment) == 0: 
+            errors += [f"No comments found with reddit_id {reddit_id}"]
+        else:
+            comment = comment[0]
+
+    if not errors:
         payload = {
             "success": True,
             "comment": comment.to_dict()
         }
-
-    except AttributeError:  # comment not found
+    else:
         payload = {
             "success": False,
-            "errors": [f"Comment item matching id {by_id} not found"]
+            "errors": errors
         }
 
     return payload
@@ -343,17 +372,31 @@ def resolve_accounts(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_account(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
-    try:
+    reddit_id = kwargs.get('reddit_id')
+    errors = []
+
+    if by_id:
         account = Account.query.get(by_id)
+        if not account:
+            errors += [f"No accounts found with zen id {by_id}"]
+    if reddit_id:
+        account = Account.query.filter_by(reddit_account_id=reddit_id).all()
+        if len(account) > 1:
+            errors += [f"Multiple accounts found with reddit_id {reddit_id}"]
+        elif len(account) == 0: 
+            errors += [f"No accounts found with reddit_id {reddit_id}"]
+        else:
+            account = account[0]
+
+    if not errors:
         payload = {
             "success": True,
             "account": account.to_dict()
         }
-
-    except AttributeError:
+    else:
         payload = {
             "success": False,
-            "errors": [f"Account matching id {by_id} not found"]
+            "errors": errors
         }
 
     return payload
@@ -472,18 +515,31 @@ def resolve_subreddits(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_subreddit(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
+    reddit_id = kwargs.get('reddit_id')
+    errors = []
 
-    try:
+    if by_id:
         subreddit = Subreddit.query.get(by_id)
+        if not subreddit:
+            errors += [f"No subreddits found with zen id {by_id}"]
+    if reddit_id:
+        subreddit = Subreddit.query.filter_by(reddit_subreddit_id=reddit_id).all()
+        if len(subreddit) > 1:
+            errors += [f"Multiple subreddits found with reddit_id {reddit_id}"]
+        elif len(subreddit) == 0: 
+            errors += [f"No subreddits found with reddit_id {reddit_id}"]
+        else:
+            subreddit = subreddit[0]
+
+    if not errors:
         payload = {
             "success": True,
             "subreddit": subreddit.to_dict()
         }
-
-    except AttributeError:
+    else:
         payload = {
             "success": False,
-            "errors": [f"Subreddit matching id {by_id} not found"]
+            "errors": errors
         }
 
     return payload

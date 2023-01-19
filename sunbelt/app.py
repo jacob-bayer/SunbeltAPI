@@ -30,6 +30,9 @@ query.set_field("subredditdetails", resolve_subreddit_details)
 
 mutation = ObjectType("Mutation")
 mutation.set_field("createComment", resolve_create_comment)
+mutation.set_field("createPost", resolve_create_post)
+mutation.set_field("createAccount", resolve_create_account)
+mutation.set_field("createSubreddit", resolve_create_subreddit)
 
 type_defs = load_schema_from_path("api/schema.graphql")
 schema = make_executable_schema(
