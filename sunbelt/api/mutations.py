@@ -8,10 +8,10 @@ import pytz
 et = pytz.timezone('US/Eastern')
 
 def create_object(kind, from_dict):
-
     # Returns bool indicating whether a new version of the object should be created
     def set_zen_ids(kind, obj_dict_to_update):
         should_write = True
+
 
         reddit_id = obj_dict_to_update[f'reddit_{kind}_id']
         model = lookup_dict[kind]["main"]
@@ -73,23 +73,30 @@ def create_object(kind, from_dict):
             from_dict['removed'] = from_dict['selftext'] == '[removed]'
             from_dict['deleted'] = from_dict['selftext'] == '[deleted]'
             
-            subreddit = from_dict['subreddit']
-            create_object('subreddit', subreddit)
-            from_dict['zen_subreddit_id'] = subreddit['zen_subreddit_id']
+            subreddit = from_dict.get('subreddit')
+            if subreddit:
+                create_object('subreddit', subreddit)
+                from_dict['zen_subreddit_id'] = subreddit['zen_subreddit_id']
 
         author = from_dict.get('author')
         if author:
+            if not isinstance(author, dict):
+                author = {'reddit_account_id': from_dict['reddit_account_id'],
+                          'name': from_dict['author']}
             create_object('account', author)
-            from_dict['zen_account_id'] = author['zen_account_id']
+            zen_account_id = author['zen_account_id']
+            from_dict['zen_account_id'] = zen_account_id
+
 
         if kind == 'comment':
             from_dict['removed'] = from_dict['body'] == '[removed]'
             from_dict['deleted'] = from_dict['body'] == '[deleted]'
 
-            post = from_dict['post']
-            create_object('post', post)
-            from_dict['zen_post_id'] = post['zen_post_id']
-            from_dict['zen_subreddit_id'] = post['zen_subreddit_id']
+            post = from_dict.get('post')
+            if post:
+                create_object('post', post)
+                from_dict['zen_post_id'] = post['zen_post_id']
+                from_dict['zen_subreddit_id'] = post['zen_subreddit_id']
     
     
     models = lookup_dict[kind]
@@ -116,7 +123,8 @@ def create_object(kind, from_dict):
         db.session.commit()
         final_result = models['main'].query.get(from_dict[f'zen_{kind}_id'])
         payload = {'success': True,
-                    kind : final_result.to_dict()}
+                    kind : final_result.to_dict(),
+                    'created_new_version': should_write}
     except Exception as e:
         db.session.rollback()
         raise e

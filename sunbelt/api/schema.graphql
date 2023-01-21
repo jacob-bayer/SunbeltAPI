@@ -74,6 +74,7 @@ type Post {
     most_recent_score : Int
     most_recent_upvote_ratio : Float
     most_recent_created_utc : Float
+    most_recent_selftext : String
 }
 
 type PostDetail {
@@ -220,6 +221,7 @@ type PostResult {
     success: Boolean!
     errors: [String]
     post: Post
+    created_new_version: Boolean
 }
 
 type PostsResult {
@@ -244,6 +246,7 @@ type CommentResult {
     success: Boolean!
     errors: [String]
     comment: Comment
+    created_new_version: Boolean
 }
 
 type CommentsResult {
@@ -268,6 +271,7 @@ type AccountResult {
     success: Boolean!
     errors: [String]
     account: Account
+    created_new_version: Boolean
 }
 
 type AccountsResult {
@@ -292,6 +296,7 @@ type SubredditResult {
     success: Boolean!
     errors: [String]
     subreddit: Subreddit
+    created_new_version: Boolean
 }
 
 type SubredditsResult {

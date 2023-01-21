@@ -61,3 +61,47 @@ def graphql_server():
     return jsonify(result), status_code
 
 
+
+# https://flask-jwt-extended.readthedocs.io/en/stable/
+
+
+# from flask_jwt_extended import create_access_token
+# from flask_jwt_extended import get_jwt_identity
+# from flask_jwt_extended import jwt_required
+# from flask_jwt_extended import JWTManager
+
+# from dotenv import load_dotenv
+
+# load_dotenv()
+# app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
+# jwt = JWTManager(app)
+
+# @app.route("/login", methods=["POST"])
+# def login():
+#     if not request.is_json:
+#         return jsonify({"msg": "Missing JSON in request"}), 400
+
+#     username = request.json.get("username", None)
+#     password = request.json.get("password", None)
+#     if not username:
+#         return jsonify({"msg": "Missing username parameter"}), 400
+#     if not password:
+#         return jsonify({"msg": "Missing password parameter"}), 400
+
+#     if username != "test" or password != "test":
+#         return jsonify({"msg": "Bad username or password"}), 401
+
+#     # Identity can be any data that is json serializable
+#     access_token = create_access_token(identity=username)
+#     return jsonify(access_token=access_token), 200
+
+
+# # Protect a route with jwt_required, which will kick out requests
+# # without a valid JWT present.
+# @app.route("/protected", methods=["GET"])
+# @jwt_required()
+# def protected():
+#     breakpoint()
+#     # Access the identity of the current user with get_jwt_identity
+#     current_user = get_jwt_identity()
+#     return jsonify(logged_in_as=current_user), 200
