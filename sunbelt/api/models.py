@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from sunbelt import db
+from main import db
 from sqlalchemy.orm import relationship, reconstructor
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Index, Integer, Text, text, Numeric
 
@@ -13,10 +13,10 @@ class Subreddit(db.Model):
     __tablename__ = 'subreddits'
     __table_args__ = {'schema': 'subreddits'}
 
-    zen_subreddit_id = Column(BigInteger, primary_key=True, index=True)
+    sun_subreddit_id = Column(BigInteger, primary_key=True, index=True)
     reddit_subreddit_id = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     display_name_prefixed = Column(Text)
     title = Column(Text)
     display_name = Column(Text)
@@ -34,8 +34,8 @@ class Subreddit(db.Model):
         return self.reddit_subreddit_id
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_subreddit_id
+    def sun_unique_id(self):
+        return self.sun_subreddit_id
 
     @property
     def most_recent_detail(self):
@@ -43,12 +43,12 @@ class Subreddit(db.Model):
 
     def to_dict(self):
         main_dict = {
-            'zen_subreddit_id': self.zen_subreddit_id,
+            'sun_subreddit_id': self.sun_subreddit_id,
             'reddit_unique_id' : self.reddit_unique_id,
-            'zen_unique_id' : self.zen_unique_id,
+            'sun_unique_id' : self.sun_unique_id,
             'reddit_subreddit_id': self.reddit_subreddit_id,
             'url': self.url,
-            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'display_name_prefixed': self.display_name_prefixed,
             'title': self.title,
             'display_name': self.display_name,
@@ -63,32 +63,32 @@ class Subreddit(db.Model):
 class SubredditVersion(db.Model):
     __tablename__ = 'subreddit_versions'
     __table_args__ = (
-        Index('ix_subreddits_subreddit_versions', 'zen_subreddit_id', 'zen_subreddit_version_id', 'zen_subreddit_detail_id'),
+        Index('ix_subreddits_subreddit_versions', 'sun_subreddit_id', 'sun_subreddit_version_id', 'sun_subreddit_detail_id'),
         {'schema': 'subreddits'}
     )
 
-    zen_subreddit_id = Column(ForeignKey('subreddits.subreddits.zen_subreddit_id'), primary_key=True, nullable=False)
-    zen_subreddit_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    zen_subreddit_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_subreddit_id = Column(ForeignKey('subreddits.subreddits.sun_subreddit_id'), primary_key=True, nullable=False)
+    sun_subreddit_version_id = Column(BigInteger, primary_key=True, nullable=False)
+    sun_subreddit_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 
     subreddit = relationship('Subreddit', back_populates='versions')
     detail = relationship('SubredditDetail', uselist = False, back_populates='version')
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_subreddit_id
+    def sun_unique_id(self):
+        return self.sun_subreddit_id
 
     @hybrid_property
-    def zen_version_id(self):
-        return self.zen_subreddit_version_id
+    def sun_version_id(self):
+        return self.sun_subreddit_version_id
 
 class SubredditDetail(db.Model):
     __tablename__ = 'subreddit_details'
     __table_args__ = {'schema': 'subreddits'}
 
-    zen_subreddit_detail_id = Column(ForeignKey('subreddits.subreddit_versions.zen_subreddit_detail_id'), primary_key=True, index=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_subreddit_detail_id = Column(ForeignKey('subreddits.subreddit_versions.sun_subreddit_detail_id'), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     active_user_count = Column(BigInteger)
     accounts_active = Column(BigInteger)
     public_traffic = Column(Boolean)
@@ -165,16 +165,16 @@ class SubredditDetail(db.Model):
     version = relationship('SubredditVersion', back_populates='detail')
 
     @hybrid_property
-    def zen_detail_id(self):
-        return self.zen_subreddit_detail_id
+    def sun_detail_id(self):
+        return self.sun_subreddit_detail_id
 
     def to_dict(self):
         return {
-            'zen_subreddit_detail_id': self.zen_subreddit_detail_id,
-            "zen_detail_id" : self.zen_subreddit_detail_id,
-            "zen_version_id" : self.version.zen_subreddit_version_id,
-            "zen_unique_id" : self.version.subreddit.zen_subreddit_id,
-            'zen_created_at': self.zen_created_at,
+            'sun_subreddit_detail_id': self.sun_subreddit_detail_id,
+            "sun_detail_id" : self.sun_subreddit_detail_id,
+            "sun_version_id" : self.version.sun_subreddit_version_id,
+            "sun_unique_id" : self.version.subreddit.sun_subreddit_id,
+            'sun_created_at': self.sun_created_at,
             'active_user_count': self.active_user_count,
             'accounts_active': self.accounts_active,
             'public_traffic': self.public_traffic,
@@ -223,13 +223,13 @@ class Post(db.Model):
     __tablename__ = 'posts'
     __table_args__ = {'schema': 'posts'}
 
-    zen_post_id = Column(BigInteger, primary_key=True, index=True)
-    zen_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.zen_subreddit_id'), nullable=False)
-    zen_account_id = Column(BigInteger, ForeignKey('accounts.accounts.zen_account_id'))
+    sun_post_id = Column(BigInteger, primary_key=True, index=True)
+    sun_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.sun_subreddit_id'), nullable=False)
+    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'))
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     title = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
     approved_at_utc = Column(Text)
@@ -256,21 +256,21 @@ class Post(db.Model):
         return self.reddit_post_id
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_post_id
+    def sun_unique_id(self):
+        return self.sun_post_id
 
     def __repr__(self):
-        return f"ZenPost({self.zen_post_id})"
+        return f"SunPost({self.sun_post_id})"
     
     def to_dict(self):
         main_dict = {
-            "zen_post_id" : self.zen_post_id,
-            "zen_created_at" : self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            "sun_post_id" : self.sun_post_id,
+            "sun_created_at" : self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             "reddit_post_id" : self.reddit_post_id,
             "reddit_account_id" : self.reddit_account_id,
             "reddit_subreddit_id" : self.reddit_subreddit_id,
             'reddit_unique_id' : self.reddit_unique_id,
-            'zen_unique_id' : self.zen_unique_id,
+            'sun_unique_id' : self.sun_unique_id,
             "title" : self.title,
             "permalink" : self.permalink,
             "author" : self.author.to_dict() if self.author else None,
@@ -304,33 +304,33 @@ class Post(db.Model):
 class PostVersion(db.Model):
     __tablename__ = 'post_versions'
     __table_args__ = (
-        Index('ix_posts_post_versions', 'zen_post_id', 'zen_post_version_id', 'zen_post_detail_id'),
+        Index('ix_posts_post_versions', 'sun_post_id', 'sun_post_version_id', 'sun_post_detail_id'),
         {'schema': 'posts'}
     )
 
-    zen_post_id = Column(BigInteger, ForeignKey('posts.posts.zen_post_id'), primary_key=True, nullable=False)
-    zen_post_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    zen_post_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_post_id = Column(BigInteger, ForeignKey('posts.posts.sun_post_id'), primary_key=True, nullable=False)
+    sun_post_version_id = Column(BigInteger, primary_key=True, nullable=False)
+    sun_post_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 
     post = relationship('Post', back_populates='versions')
     detail = relationship('PostDetail', uselist=False, back_populates='version')
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_post_id
+    def sun_unique_id(self):
+        return self.sun_post_id
 
     @hybrid_property
-    def zen_version_id(self):
-        return self.zen_post_version_id
+    def sun_version_id(self):
+        return self.sun_post_version_id
 
 
 class PostDetail(db.Model):
     __tablename__ = 'post_details'
     __table_args__ = {'schema': 'posts'}
 
-    zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_versions.zen_post_detail_id'), primary_key=True, index=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_versions.sun_post_detail_id'), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     gilded = Column(BigInteger)
     selftext = Column(Text)
     downs = Column(BigInteger)
@@ -420,18 +420,18 @@ class PostDetail(db.Model):
     version = relationship('PostVersion', back_populates='detail')
 
     @hybrid_property
-    def zen_detail_id(self):
-        return self.zen_post_detail_id
+    def sun_detail_id(self):
+        return self.sun_post_detail_id
 
     def to_dict(self):
         return {
-        "zen_post_detail_id" : self.zen_post_detail_id,
-        "zen_post_version_id" : self.version.zen_post_version_id,
-        "zen_post_id" : self.version.post.zen_post_id,
-        "zen_detail_id" : self.zen_post_detail_id,
-        "zen_version_id" : self.version.zen_post_version_id,
-        "zen_unique_id" : self.version.post.zen_post_id,
-        "zen_created_at" : self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+        "sun_post_detail_id" : self.sun_post_detail_id,
+        "sun_post_version_id" : self.version.sun_post_version_id,
+        "sun_post_id" : self.version.post.sun_post_id,
+        "sun_detail_id" : self.sun_post_detail_id,
+        "sun_version_id" : self.version.sun_post_version_id,
+        "sun_unique_id" : self.version.post.sun_post_id,
+        "sun_created_at" : self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
         "gilded" : self.gilded,
         "selftext" : self.selftext,
         "downs" : self.downs,
@@ -444,9 +444,9 @@ class PostDetail(db.Model):
 #     __tablename__ = 'awardings'
 #     __table_args__ = {'schema': 'posts'}
 
-#     zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     reddit_subreddit_id = Column(Text)
 #     giver_coin_reward = Column(Text)
 #     is_new = Column(Boolean)
@@ -483,9 +483,9 @@ class PostDetail(db.Model):
 #     __tablename__ = 'gildings'
 #     __table_args__ = {'schema': 'posts'}
 
-#     zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     reddit_gid = Column(Text)
 #     value = Column(BigInteger)
 
@@ -496,9 +496,9 @@ class PostDetail(db.Model):
 #     __tablename__ = 'media'
 #     __table_args__ = {'schema': 'posts'}
 
-#     zen_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     media_type = Column(Text)
 #     oembed_provider_url = Column(Text)
 #     oembed_version = Column(Text)
@@ -531,9 +531,9 @@ class PostDetail(db.Model):
 #     __tablename__ = 'media_embed'
 #     __table_args__ = {'schema': 'posts'}
 
-#     zen_media_embed_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_media_embed_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     content = Column(Text)
 #     width = Column(Float(53))
 #     scrolling = Column(Boolean)
@@ -546,9 +546,9 @@ class PostDetail(db.Model):
 #     __tablename__ = 'secure_media'
 #     __table_args__ = {'schema': 'posts'}
 
-#     zen_secure_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_post_detail_id = Column(ForeignKey('posts.post_details.zen_post_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_secure_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     type = Column(Text)
 #     oembed_provider_url = Column(Text)
 #     oembed_version = Column(Text)
@@ -580,8 +580,8 @@ class Account(db.Model):
     __tablename__ = 'accounts'
     __table_args__ = {'schema': 'accounts'}
 
-    zen_account_id = Column(BigInteger, primary_key=True, index=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_account_id = Column(BigInteger, primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     name = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
     created = Column(Float(53))
@@ -595,24 +595,24 @@ class Account(db.Model):
         return self.reddit_account_id
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_account_id
+    def sun_unique_id(self):
+        return self.sun_account_id
 
     @property
     def most_recent_detail(self):
         return self.versions[-1].detail
 
     def __repr__(self):
-        return f'ZenAccount({self.zen_account_id})'
+        return f'SunAccount({self.sun_account_id})'
 
     def to_dict(self):
         main_dict = {
-            'zen_account_id': self.zen_account_id,
-            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'sun_account_id': self.sun_account_id,
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'name': self.name,
             'reddit_account_id': self.reddit_account_id,
             'reddit_unique_id': self.reddit_unique_id,
-            'zen_unique_id': self.zen_unique_id
+            'sun_unique_id': self.sun_unique_id
         }
         most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_detail_dict}
@@ -620,32 +620,32 @@ class Account(db.Model):
 class AccountVersion(db.Model):
     __tablename__ = 'account_versions'
     __table_args__ = (
-        Index('ix_accounts_account_versions', 'zen_account_id', 'zen_account_version_id', 'zen_account_detail_id'),
+        Index('ix_accounts_account_versions', 'sun_account_id', 'sun_account_version_id', 'sun_account_detail_id'),
         {'schema': 'accounts'}
     )
 
-    zen_account_id = Column(BigInteger, ForeignKey('accounts.accounts.zen_account_id'), primary_key=True, nullable=False)
-    zen_account_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    zen_account_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'), primary_key=True, nullable=False)
+    sun_account_version_id = Column(BigInteger, primary_key=True, nullable=False)
+    sun_account_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 
     account = relationship('Account', back_populates='versions')
     detail = relationship('AccountDetail', uselist = False, back_populates='version')
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_account_id
+    def sun_unique_id(self):
+        return self.sun_account_id
 
     @hybrid_property
-    def zen_version_id(self):
-        return self.zen_account_version_id
+    def sun_version_id(self):
+        return self.sun_account_version_id
 
 class AccountDetail(db.Model):
     __tablename__ = 'account_details'
     __table_args__ = {'schema': 'accounts'}
 
-    zen_account_detail_id = Column(BigInteger, ForeignKey('accounts.account_versions.zen_account_detail_id'), unique = True, primary_key=True, index=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_account_detail_id = Column(BigInteger, ForeignKey('accounts.account_versions.sun_account_detail_id'), unique = True, primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     comment_karma = Column(BigInteger)
     link_karma = Column(BigInteger)
     total_karma = Column(BigInteger)
@@ -666,13 +666,13 @@ class AccountDetail(db.Model):
     version = relationship('AccountVersion', back_populates='detail')
 
     @hybrid_property
-    def zen_detail_id(self):
-        return self.zen_account_detail_id
+    def sun_detail_id(self):
+        return self.sun_account_detail_id
 
     def to_dict(self):
         return {
-            'zen_account_detail_id': self.zen_account_detail_id,
-            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'sun_account_detail_id': self.sun_account_detail_id,
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'comment_karma': self.comment_karma,
             'link_karma': self.link_karma,
             'total_karma': self.total_karma,
@@ -695,16 +695,16 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'comments'}
 
-    zen_comment_id = Column(BigInteger, primary_key=True, index=True)
-    zen_post_id = Column(BigInteger, ForeignKey('posts.posts.zen_post_id'), nullable=False)
-    zen_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.zen_subreddit_id'), nullable=False)
-    zen_account_id = Column(BigInteger, ForeignKey('accounts.accounts.zen_account_id'))
+    sun_comment_id = Column(BigInteger, primary_key=True, index=True)
+    sun_post_id = Column(BigInteger, ForeignKey('posts.posts.sun_post_id'), nullable=False)
+    sun_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.sun_subreddit_id'), nullable=False)
+    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'))
     reddit_comment_id = Column(Text, nullable=False)
     reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     created_utc = Column(Numeric)
     depth = Column(BigInteger)
     permalink = Column(Text)
@@ -715,7 +715,7 @@ class Comment(db.Model):
     versions = relationship('CommentVersion', back_populates='comment')
 
     def __repr__(self):
-        return f'ZenComment({self.zen_comment_id})'
+        return f'SunComment({self.sun_comment_id})'
 
     @property
     def parent(self):
@@ -734,8 +734,8 @@ class Comment(db.Model):
     # allows sort by this
     # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_comment_id
+    def sun_unique_id(self):
+        return self.sun_comment_id
 
     @property
     def most_recent_detail(self):
@@ -743,18 +743,18 @@ class Comment(db.Model):
 
     def to_dict(self):
         main_dict = {
-            'zen_comment_id': self.zen_comment_id,
-            'zen_post_id': self.zen_post_id,
-            'zen_subreddit_id': self.zen_subreddit_id,
-            'zen_account_id': self.zen_account_id,
+            'sun_comment_id': self.sun_comment_id,
+            'sun_post_id': self.sun_post_id,
+            'sun_subreddit_id': self.sun_subreddit_id,
+            'sun_account_id': self.sun_account_id,
             'reddit_comment_id': self.reddit_comment_id,
             'reddit_parent_id': self.reddit_parent_id,
             'reddit_post_id': self.reddit_post_id,
             'reddit_account_id': self.reddit_account_id,
             'reddit_unique_id': self.reddit_unique_id,
-            'zen_unique_id': self.zen_unique_id,
+            'sun_unique_id': self.sun_unique_id,
             'reddit_subreddit_id': self.reddit_subreddit_id,
-            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'created_utc': float(self.created_utc),
             'depth': str(self.depth) or '',
             'permalink': self.permalink,
@@ -768,32 +768,32 @@ class Comment(db.Model):
 class CommentVersion(db.Model):
     __tablename__ = 'comment_versions'
     __table_args__ = (
-        Index('ix_comments_comment_versions', 'zen_comment_id', 'zen_comment_version_id', 'zen_comment_detail_id'),
+        Index('ix_comments_comment_versions', 'sun_comment_id', 'sun_comment_version_id', 'sun_comment_detail_id'),
         {'schema': 'comments'}
     )
 
-    zen_comment_id = Column(BigInteger, ForeignKey('comments.comments.zen_comment_id'), primary_key=True, nullable=False)
-    zen_comment_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    zen_comment_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_comment_id = Column(BigInteger, ForeignKey('comments.comments.sun_comment_id'), primary_key=True, nullable=False)
+    sun_comment_version_id = Column(BigInteger, primary_key=True, nullable=False)
+    sun_comment_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 
     comment = relationship('Comment', back_populates='versions')
     detail = relationship('CommentDetail', uselist=False, back_populates='version')
 
     @hybrid_property
-    def zen_unique_id(self):
-        return self.zen_comment_id
+    def sun_unique_id(self):
+        return self.sun_comment_id
 
     @hybrid_property
-    def zen_version_id(self):
-        return self.zen_comment_version_id
+    def sun_version_id(self):
+        return self.sun_comment_version_id
 
 class CommentDetail(db.Model):
     __tablename__ = 'comment_details'
     __table_args__ = {'schema': 'comments'}
 
-    zen_comment_detail_id = Column(ForeignKey('comments.comment_versions.zen_comment_detail_id'), primary_key=True, index=True)
-    zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_comment_detail_id = Column(ForeignKey('comments.comment_versions.sun_comment_detail_id'), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
     controversiality = Column(BigInteger)
     ups = Column(BigInteger)
     downs = Column(BigInteger)
@@ -845,16 +845,16 @@ class CommentDetail(db.Model):
     version = relationship('CommentVersion', back_populates='detail')
 
     @hybrid_property
-    def zen_detail_id(self):
-        return self.zen_comment_detail_id
+    def sun_detail_id(self):
+        return self.sun_comment_detail_id
 
     def to_dict(self):
         return {
-            'zen_comment_detail_id': self.zen_comment_detail_id,
-            "zen_comment_version_id" : self.version.zen_comment_version_id,
-            "zen_detail_id" : self.zen_comment_detail_id,
-            "zen_version_id" : self.version.zen_comment_version_id,
-            'zen_created_at': self.zen_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'sun_comment_detail_id': self.sun_comment_detail_id,
+            "sun_comment_version_id" : self.version.sun_comment_version_id,
+            "sun_detail_id" : self.sun_comment_detail_id,
+            "sun_version_id" : self.version.sun_comment_version_id,
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'controversiality': str(self.controversiality) or '',
             'ups': self.ups,
             'downs': self.downs,
@@ -902,9 +902,9 @@ class CommentDetail(db.Model):
 #     __tablename__ = 'awardings'
 #     __table_args__ = {'schema': 'comments'}
 
-#     zen_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_comment_detail_id = Column(ForeignKey('comments.comment_details.sun_comment_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     giver_coin_reward = Column(Text)
 #     is_new = Column(Boolean)
 #     days_of_drip_extension = Column(Text)
@@ -939,9 +939,9 @@ class CommentDetail(db.Model):
 #     __tablename__ = 'gildings'
 #     __table_args__ = {'schema': 'comments'}
 
-#     zen_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     zen_comment_detail_id = Column(ForeignKey('comments.comment_details.zen_comment_detail_id'), nullable=False)
-#     zen_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
+#     sun_comment_detail_id = Column(ForeignKey('comments.comment_details.sun_comment_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
 #     reddit_gid = Column(Text)
 #     value = Column(Numeric)
 

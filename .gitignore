@@ -3,11 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#
+.gcloudignore
+
 #mac stuff
 .DS_Store
 
 # C extensions
 *.so
+
+# any YAML
+*.yaml
 
 # Distribution / packaging
 .Python

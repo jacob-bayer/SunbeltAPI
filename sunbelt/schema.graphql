@@ -4,9 +4,10 @@ schema {
 }
 
 input OrderByInput {
-  zen_unique_id: Sort
-  most_recent_zen_version_id: Sort
-  most_recent_zen_detail_id: Sort
+  sun_unique_id: Sort
+  most_recent_sun_version_id: Sort
+  most_recent_sun_detail_id: Sort
+  most_recent_score: Sort
 }
 
 enum Sort {
@@ -15,21 +16,21 @@ enum Sort {
 }
 
 type Subreddit {
-    zen_subreddit_id: ID!
+    sun_subreddit_id: ID!
     reddit_subreddit_id: String
     reddit_unique_id : String
-    zen_unique_id: Int
+    sun_unique_id: Int
     url: String
-    zen_created_at: String
+    sun_created_at: String
     display_name_prefixed: String
     title: String
     display_name: String
     created: Float
     lang: String
     created_utc: Float
-    most_recent_zen_version_id: Int
-    most_recent_zen_detail_id: Int
-    most_recent_zen_created_at: String
+    most_recent_sun_version_id: Int
+    most_recent_sun_detail_id: Int
+    most_recent_sun_created_at: String
     most_recent_active_user_count: Int
     most_recent_accounts_active: Int
     most_recent_public_traffic: Boolean
@@ -38,11 +39,11 @@ type Subreddit {
 }
 
 type SubredditDetail {
-    zen_subreddit_detail_id : ID!
-    zen_created_at: String
-    zen_detail_id : Int!
-    zen_version_id: Int!
-    zen_unique_id: Int!
+    sun_subreddit_detail_id : ID!
+    sun_created_at: String
+    sun_detail_id : Int!
+    sun_version_id: Int!
+    sun_unique_id: Int!
     active_user_count : Int
     accounts_active : Int
     public_traffic : Boolean
@@ -54,20 +55,20 @@ type SubredditDetail {
 }
 
 type Post {
-    zen_post_id: ID!
+    sun_post_id: ID!
     reddit_post_id: String
     reddit_account_id: String
     reddit_subreddit_id: String
     reddit_unique_id : String
-    zen_unique_id: Int
-    most_recent_zen_version_id: Int
-    most_recent_zen_detail_id: Int
+    sun_unique_id: Int
+    most_recent_sun_version_id: Int
+    most_recent_sun_detail_id: Int
     title: String
     permalink : String
     author : Account
     subreddit : Subreddit
     versions : [PostDetail]
-    zen_created_at : String
+    sun_created_at : String
     most_recent_detail : PostDetail
     most_recent_ups : Int
     most_recent_downs : Int
@@ -78,13 +79,13 @@ type Post {
 }
 
 type PostDetail {
-    zen_post_detail_id : ID!
-    zen_post_version_id: Int!
-    zen_post_id: Int!
-    zen_detail_id : Int!
-    zen_version_id: Int!
-    zen_unique_id: Int!
-    zen_created_at : String
+    sun_post_detail_id : ID!
+    sun_post_version_id: Int!
+    sun_post_id: Int!
+    sun_detail_id : Int!
+    sun_version_id: Int!
+    sun_unique_id: Int!
+    sun_created_at : String
     selftext : String
     downs : Int
     ups : Int
@@ -92,28 +93,28 @@ type PostDetail {
 }
 
 type Comment {
-    zen_comment_id: ID!
-    zen_post_id: Int
-    zen_subreddit_id: Int
-    zen_account_id: Int
-    zen_unique_id: ID!
+    sun_comment_id: ID!
+    sun_post_id: Int
+    sun_subreddit_id: Int
+    sun_account_id: Int
+    sun_unique_id: ID!
     reddit_comment_id: String
     reddit_unique_id : String
     reddit_parent_id: String
     reddit_post_id: String
     reddit_account_id: String
     reddit_subreddit_id: String
-    zen_created_at: String
+    sun_created_at: String
     created_utc: Float
     depth: String
     permalink: String
     is_submitter: Boolean
     created: Float
-    most_recent_zen_comment_detail_id: Int,
-    most_recent_zen_comment_version_id: Int,
-    most_recent_zen_detail_id: Int,
-    most_recent_zen_version_id: Int,
-    most_recent_zen_created_at: String,
+    most_recent_sun_comment_detail_id: Int,
+    most_recent_sun_comment_version_id: Int,
+    most_recent_sun_detail_id: Int,
+    most_recent_sun_version_id: Int,
+    most_recent_sun_created_at: String,
     most_recent_controversiality: String,
     most_recent_ups: Int,
     most_recent_downs: Int,
@@ -157,12 +158,12 @@ type Comment {
 }
 
 type CommentDetail {
-    zen_comment_detail_id : ID!
-    zen_comment_version_id: Int!
-    zen_detail_id : Int!
-    zen_version_id: Int!
-    zen_unique_id: Int!
-    zen_created_at : String
+    sun_comment_detail_id : ID!
+    sun_comment_version_id: Int!
+    sun_detail_id : Int!
+    sun_version_id: Int!
+    sun_unique_id: Int!
+    sun_created_at : String
     body : String
     downs : Int
     ups : Int
@@ -170,15 +171,15 @@ type CommentDetail {
 }
 
 type Account {
-    zen_account_id: ID!
-    zen_created_at: String
+    sun_account_id: ID!
+    sun_created_at: String
     reddit_unique_id : String
-    zen_unique_id: Int
+    sun_unique_id: Int
     name: String
     reddit_account_id: String
-    most_recent_zen_version_id: Int
-    most_recent_zen_detail_id: Int
-    most_recent_zen_created_at: String
+    most_recent_sun_version_id: Int
+    most_recent_sun_detail_id: Int
+    most_recent_sun_created_at: String
     most_recent_comment_karma: Int
     most_recent_link_karma: Int
     most_recent_total_karma: Int
@@ -194,11 +195,11 @@ type Account {
 }
 
 type AccountDetail {
-    zen_account_detail_id : ID!
-    zen_detail_id : Int!
-    zen_version_id: Int!
-    zen_unique_id: Int!
-    zen_created_at : String
+    sun_account_detail_id : ID!
+    sun_detail_id : Int!
+    sun_version_id: Int!
+    sun_unique_id: Int!
+    sun_created_at : String
     comment_karma : Int
     link_karma : Int
     total_karma : Int
@@ -320,7 +321,7 @@ type SubredditDetailsResult {
 type Query {
     post(byId: ID, reddit_id: String): PostResult!
     postdetail(byId: ID!): PostDetailResult!
-    postdetails(zen_unique_id: Int, zen_post_id: Int): PostDetailsResult!
+    postdetails(sun_unique_id: Int, sun_post_id: Int): PostDetailsResult!
     posts(postedBefore: String,
           postedAfter: String,
           updatedBefore: String, 
@@ -329,16 +330,17 @@ type Query {
 
     comment(byId: ID, reddit_id: String): CommentResult!
     commentdetail(byId: ID!): CommentDetailResult!
-    commentdetails(zen_unique_id: Int, zen_comment_id: Int): CommentDetailsResult!
+    commentdetails(sun_unique_id: Int, sun_comment_id: Int): CommentDetailsResult!
     comments(commentedBefore: String,
           commentedAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
-          orderBy: OrderByInput): CommentsResult!
+          orderBy: OrderByInput,
+          sun_post_id: Int): CommentsResult!
 
     account(byId: ID, reddit_id: String): AccountResult!
     accountdetail(byId: ID!): AccountDetailResult!
-    accountdetails(zen_unique_id: Int, zen_account_id: Int): AccountDetailsResult!
+    accountdetails(sun_unique_id: Int, sun_account_id: Int): AccountDetailsResult!
     accounts(createdBefore: String,
           createdAfter: String,
           updatedBefore: String, 
@@ -347,7 +349,7 @@ type Query {
 
     subreddit(byId: ID, reddit_id: String): SubredditResult!
     subredditdetail(byId: ID!): SubredditDetailResult!
-    subredditdetails(zen_unique_id: Int, zen_subreddit_id: Int): SubredditDetailsResult!
+    subredditdetails(sun_unique_id: Int, sun_subreddit_id: Int): SubredditDetailsResult!
     subreddits(createdBefore: String,
           createdAfter: String,
           updatedBefore: String, 

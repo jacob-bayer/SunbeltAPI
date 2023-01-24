@@ -1,4 +1,4 @@
-from sunbelt.models import *
+from .models import *
 
 HOURS_TO_WAIT = {'subreddit': 24,}
 
