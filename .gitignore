@@ -5,6 +5,7 @@ __pycache__/
 
 #
 .gcloudignore
+stuff_for_gcloud/
 
 #mac stuff
 .DS_Store
