@@ -9,7 +9,7 @@ from ariadne import QueryType
 app = Flask(__name__)
 
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['REAL_DB_URL']
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_DATABASE_URL']
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
