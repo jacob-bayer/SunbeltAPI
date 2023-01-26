@@ -854,6 +854,7 @@ class CommentDetail(db.Model):
             "sun_comment_version_id" : self.version.sun_comment_version_id,
             "sun_detail_id" : self.sun_comment_detail_id,
             "sun_version_id" : self.version.sun_comment_version_id,
+            "sun_unique_id" : self.version.comment.sun_comment_id,
             'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'controversiality': str(self.controversiality) or '',
             'ups': self.ups,

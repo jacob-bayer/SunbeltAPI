@@ -97,7 +97,7 @@ type Comment {
     sun_post_id: Int
     sun_subreddit_id: Int
     sun_account_id: Int
-    sun_unique_id: ID!
+    sun_unique_id: Int!
     reddit_comment_id: String
     reddit_unique_id : String
     reddit_parent_id: String
