@@ -163,7 +163,7 @@ type CommentDetail {
     sun_detail_id : Int!
     sun_version_id: Int!
     sun_unique_id: Int!
-    sun_created_at : String
+    sun_created_at: String
     body : String
     downs : Int
     ups : Int
