@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-#
-.gcloudignore
-stuff_for_gcloud/
 
 #mac stuff
 .DS_Store
