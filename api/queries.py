@@ -377,6 +377,7 @@ def resolve_accounts(obj, info, **kwargs):
 def resolve_account(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
     reddit_id = kwargs.get('reddit_id')
+    name = kwargs.get('name')
     errors = []
 
     if by_id:
@@ -391,6 +392,16 @@ def resolve_account(obj, info, **kwargs):
             errors += [f"No accounts found with reddit_id {reddit_id}"]
         else:
             account = account[0]
+
+    if name:
+        account = Account.query.filter_by(name=name).all()
+        if len(account) > 1:
+            errors += [f"Multiple accounts found with name {name}"]
+        elif len(account) == 0: 
+            errors += [f"No accounts found with name {name}"]
+        else:
+            account = account[0]
+
 
     if not errors:
         payload = {

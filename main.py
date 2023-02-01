@@ -4,6 +4,7 @@
 # where these routes need to import the resolvers which depend on 
 # the app being initialized already.
 from api import app, db
+from api.models import *
 
 from ariadne import load_schema_from_path, make_executable_schema, \
     graphql_sync, snake_case_fallback_resolvers, ObjectType

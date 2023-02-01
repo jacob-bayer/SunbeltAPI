@@ -4,14 +4,23 @@ import os
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
 from ariadne import QueryType
 
 app = Flask(__name__)
 
+# FLASK_ENV variable is depreciated and FLASK_DEBUG is used instead.
+# Debug = True means development mode.
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_DATABASE_URL']
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+if app.debug:
+    app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///app.db' #os.environ['LOCAL_SUNBELT_DB_URL']
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
+
+
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 query = QueryType()
 

@@ -338,7 +338,7 @@ type Query {
           orderBy: OrderByInput,
           sun_post_id: Int): CommentsResult!
 
-    account(byId: ID, reddit_id: String): AccountResult!
+    account(byId: ID, reddit_id: String, name: String): AccountResult!
     accountdetail(byId: ID!): AccountDetailResult!
     accountdetails(sun_unique_id: Int, sun_account_id: Int): AccountDetailsResult!
     accounts(createdBefore: String,

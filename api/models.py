@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from main import db
+from . import db
 from sqlalchemy.orm import relationship, reconstructor
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Index, Integer, Text, text, Numeric
 
@@ -95,6 +95,7 @@ class SubredditDetail(db.Model):
     subscribers = Column(BigInteger)
     subreddit_type = Column(Text)
     suggested_comment_sort = Column(Text)
+    deleted = Column(Boolean)
     allow_polls = Column(Boolean)
     collapse_deleted_comments = Column(Boolean)
     public_description_html = Column(Text)
@@ -651,6 +652,7 @@ class AccountDetail(db.Model):
     total_karma = Column(BigInteger)
     awardee_karma = Column(BigInteger)
     awarder_karma = Column(BigInteger)
+    deleted = Column(Boolean)
     listing_use_sort = Column(Boolean)
     is_employee = Column(Boolean)
     snoovatar_size = Column(Text)
