@@ -1,5 +1,5 @@
 
-![Sunbelt](/../../../../github/SAWP/blob/main/assets/logo-no-background.png)
+![Sunbelt](/../../../../jacob-bayer/SAWP/blob/main/assets/logo-no-background.png)
 
 
 # Sunbelt API
