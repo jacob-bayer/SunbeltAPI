@@ -1,5 +1,5 @@
 
-![Sunbelt](/assets/logo-no-background.png)
+![Sunbelt](../assets/logo-no-background.png)
 
 
 # Sunbelt API
