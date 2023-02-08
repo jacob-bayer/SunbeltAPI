@@ -26,17 +26,17 @@ def resolve_posts(obj, info, **kwargs):
 
     posts = Post.query
 
-    if updated_before or updated_after or order_by:
+    if order_by: # Not sure this is necessary anymore
         posts = posts.join(PostVersion)
 
 
     if updated_before:
         updated_before = convert_date(updated_before)
-        posts = posts.filter(PostVersion.sun_created_at < updated_before)
+        posts = posts.filter(Post.most_recent_version_updated_at < updated_before)
 
     if updated_after:
         updated_after = convert_date(updated_after)
-        posts = posts.filter(PostVersion.sun_created_at > updated_after)
+        posts = posts.filter(Post.most_recent_version_updated_at > updated_after)
 
     if posted_before:
         posted_before = convert_date(posted_before)
@@ -46,7 +46,7 @@ def resolve_posts(obj, info, **kwargs):
         posted_after = convert_date(posted_after)
         posts = posts.filter(Post.sun_created_at > posted_after)
     
-    if order_by:
+    if order_by: # Not sure this is necessary anymore
         posts = posts.join(PostDetail)
         order_by_to_cols = {
             'sun_unique_id' : Post.sun_post_id,
@@ -178,16 +178,16 @@ def resolve_comments(obj, info, **kwargs):
 
     comments = Comment.query
 
-    if updated_before or updated_after or order_by:
+    if order_by: # Not sure this is necessary anymore
         comments = comments.join(CommentVersion)
 
     if updated_before:
         updated_before = convert_date(updated_before)
-        comments = comments.filter(CommentVersion.sun_created_at < updated_before)
+        comments = comments.filter(Comment.most_recent_version_updated_at < updated_before)
 
     if updated_after:
         updated_after = convert_date(updated_after)
-        comments = comments.filter(CommentVersion.sun_created_at > updated_after)
+        comments = comments.filter(Comment.most_recent_version_updated_at > updated_after)
 
     if commented_before:
         commented_before = convert_date(commented_before)
@@ -200,7 +200,7 @@ def resolve_comments(obj, info, **kwargs):
     if sun_post_id:
         comments = comments.filter(Comment.sun_post_id == sun_post_id)
 
-    if order_by:
+    if order_by: # Not sure this is necessary anymore
         comments = comments.join(CommentDetail)
         order_by_to_cols = {
             'sun_unique_id' : Comment.sun_comment_id,
@@ -326,16 +326,16 @@ def resolve_accounts(obj, info, **kwargs):
 
     accounts = Account.query
 
-    if updated_before or updated_after or order_by:
+    if order_by: # Not sure this is necessary anymore
         accounts = accounts.join(AccountVersion)
 
     if updated_before:
         updated_before = convert_date(updated_before)
-        accounts = accounts.filter(AccountVersion.sun_created_at < updated_before)
+        accounts = accounts.filter(Account.most_recent_version_updated_at < updated_before)
 
     if updated_after:
         updated_after = convert_date(updated_after)
-        accounts = accounts.filter(AccountVersion.sun_created_at > updated_after)
+        accounts = accounts.filter(Account.most_recent_version_updated_at > updated_after)
 
     if created_before:
         created_before = convert_date(created_before)
@@ -345,7 +345,7 @@ def resolve_accounts(obj, info, **kwargs):
         created_after = convert_date(created_after)
         accounts = accounts.filter(Account.sun_created_at > created_after)
 
-    if order_by:
+    if order_by: # Not sure this is necessary anymore
         accounts = accounts.join(AccountDetail)
         order_by_to_cols = {
             'sun_unique_id' : Account.sun_account_id,
@@ -479,18 +479,15 @@ def resolve_subreddits(obj, info, **kwargs):
         order_by = kwargs.get('order_by')
 
         subreddits = Subreddit.query
-    
-        if updated_before or updated_after or order_by:
-            subreddits = subreddits.join(SubredditVersion)
-    
+        
         if updated_before:
             updated_before = convert_date(updated_before)
-            subreddits = subreddits.filter(SubredditVersion.sun_created_at < updated_before)
-    
+            subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at < updated_before)
+
         if updated_after:
             updated_after = convert_date(updated_after)
-            subreddits = subreddits.filter(SubredditVersion.sun_created_at > updated_after)
-    
+            subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at > updated_after)
+
         if created_before:
             created_before = convert_date(created_before)
             subreddits = subreddits.filter(Subreddit.sun_created_at < created_before)
@@ -499,7 +496,8 @@ def resolve_subreddits(obj, info, **kwargs):
             created_after = convert_date(created_after)
             subreddits = subreddits.filter(Subreddit.sun_created_at > created_after)
 
-        if order_by:
+        if order_by: # Not sure this is necessary anymore this should maybe be a hybrid property
+            subreddits = subreddits.join(SubredditVersion)
             subreddits = subreddits.join(SubredditDetail)
             order_by_to_cols = {
                 'sun_unique_id' : Subreddit.sun_subreddit_id,

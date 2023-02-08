@@ -4,9 +4,12 @@ from . import db
 from sqlalchemy.orm import relationship, reconstructor
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Index, Integer, Text, text, Numeric
 
+from sqlalchemy import select
+
 # used for sorting by properties
 # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
 from sqlalchemy.ext.hybrid import hybrid_property
+
 
 
 class Subreddit(db.Model):
@@ -16,7 +19,7 @@ class Subreddit(db.Model):
     sun_subreddit_id = Column(BigInteger, primary_key=True, index=True)
     reddit_subreddit_id = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     display_name_prefixed = Column(Text)
     title = Column(Text)
     display_name = Column(Text)
@@ -40,6 +43,16 @@ class Subreddit(db.Model):
     @property
     def most_recent_detail(self):
         return self.versions[-1].detail
+
+    @hybrid_property
+    def most_recent_version_updated_at(self):
+        return self.versions[-1].sun_created_at
+
+    @most_recent_version_updated_at.expression
+    def most_recent_version_updated_at(cls):
+        return select([SubredditVersion.sun_created_at])\
+                .where(SubredditVersion.sun_subreddit_id == cls.sun_subreddit_id)\
+                    .order_by(SubredditVersion.sun_created_at.desc()).limit(1).as_scalar()
 
     def to_dict(self):
         main_dict = {
@@ -67,10 +80,11 @@ class SubredditVersion(db.Model):
         {'schema': 'subreddits'}
     )
 
-    sun_subreddit_id = Column(ForeignKey('subreddits.subreddits.sun_subreddit_id'), primary_key=True, nullable=False)
+    # generate a foriegn key to the subreddit table
+    sun_subreddit_id = Column(ForeignKey(Subreddit.sun_subreddit_id), primary_key=True, index=True)
     sun_subreddit_version_id = Column(BigInteger, primary_key=True, nullable=False)
     sun_subreddit_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 
     subreddit = relationship('Subreddit', back_populates='versions')
     detail = relationship('SubredditDetail', uselist = False, back_populates='version')
@@ -87,15 +101,15 @@ class SubredditDetail(db.Model):
     __tablename__ = 'subreddit_details'
     __table_args__ = {'schema': 'subreddits'}
 
-    sun_subreddit_detail_id = Column(ForeignKey('subreddits.subreddit_versions.sun_subreddit_detail_id'), primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_subreddit_detail_id = Column(ForeignKey(SubredditVersion.sun_subreddit_detail_id), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     active_user_count = Column(BigInteger)
     accounts_active = Column(BigInteger)
     public_traffic = Column(Boolean)
     subscribers = Column(BigInteger)
     subreddit_type = Column(Text)
     suggested_comment_sort = Column(Text)
-    deleted = Column(Boolean)
+    deleted = Column(Boolean, nullable=False, server_default=text('false'))
     allow_polls = Column(Boolean)
     collapse_deleted_comments = Column(Boolean)
     public_description_html = Column(Text)
@@ -183,6 +197,7 @@ class SubredditDetail(db.Model):
             'subreddit_type': self.subreddit_type,
             'suggested_comment_sort': self.suggested_comment_sort,
             'allow_polls': self.allow_polls,
+            'deleted': self.deleted,
             'collapse_deleted_comments': self.collapse_deleted_comments,
             'public_description_html': self.public_description_html,
             'allow_videos': self.allow_videos,
@@ -220,17 +235,146 @@ class SubredditDetail(db.Model):
         }
 
 
+class Account(db.Model):
+    __tablename__ = 'accounts'
+    __table_args__ = {'schema': 'accounts'}
+
+    sun_account_id = Column(BigInteger, primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    name = Column(Text, nullable=False)
+    reddit_account_id = Column(Text)
+    created = Column(Float(53))
+    created_utc = Column(Float(53))
+
+    posts = relationship('Post', back_populates='author')
+    versions = relationship('AccountVersion', back_populates='account')
+
+    @hybrid_property
+    def reddit_unique_id(self):
+        return self.reddit_account_id
+
+    @hybrid_property
+    def sun_unique_id(self):
+        return self.sun_account_id
+
+    @property
+    def most_recent_detail(self):
+        return self.versions[-1].detail
+
+    @hybrid_property
+    def most_recent_version_updated_at(self):
+        return self.versions[-1].sun_created_at
+
+    @most_recent_version_updated_at.expression
+    def most_recent_version_updated_at(cls):
+        return select([AccountVersion.sun_created_at])\
+                .where(AccountVersion.sun_account_id == cls.sun_account_id)\
+                    .order_by(AccountVersion.sun_created_at.desc()).limit(1).as_scalar()
+
+    def __repr__(self):
+        return f'SunAccount({self.sun_account_id})'
+
+    def to_dict(self):
+        main_dict = {
+            'sun_account_id': self.sun_account_id,
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'name': self.name,
+            'reddit_account_id': self.reddit_account_id,
+            'reddit_unique_id': self.reddit_unique_id,
+            'sun_unique_id': self.sun_unique_id
+        }
+        most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        return {**main_dict, **most_recent_detail_dict}
+
+class AccountVersion(db.Model):
+    __tablename__ = 'account_versions'
+    __table_args__ = (
+        Index('ix_accounts_account_versions', 'sun_account_id', 'sun_account_version_id', 'sun_account_detail_id'),
+        {'schema': 'accounts'}
+    )
+
+    sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id), primary_key=True, nullable=False)
+    sun_account_version_id = Column(BigInteger, primary_key=True, nullable=False)
+    sun_account_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+
+    account = relationship('Account', back_populates='versions')
+    detail = relationship('AccountDetail', uselist = False, back_populates='version')
+
+    @hybrid_property
+    def sun_unique_id(self):
+        return self.sun_account_id
+
+    @hybrid_property
+    def sun_version_id(self):
+        return self.sun_account_version_id
+
+class AccountDetail(db.Model):
+    __tablename__ = 'account_details'
+    __table_args__ = {'schema': 'accounts'}
+
+    sun_account_detail_id = Column(BigInteger, ForeignKey(AccountVersion.sun_account_detail_id), unique = True, primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    comment_karma = Column(BigInteger)
+    link_karma = Column(BigInteger)
+    total_karma = Column(BigInteger)
+    awardee_karma = Column(BigInteger)
+    awarder_karma = Column(BigInteger)
+    is_suspended = Column(Boolean, nullable=False, server_default=text('false'))
+    deleted = Column(Boolean, nullable=False, server_default=text('false'))
+    listing_use_sort = Column(Boolean)
+    is_employee = Column(Boolean)
+    snoovatar_size = Column(Text)
+    verified = Column(Boolean)
+    is_gold = Column(Boolean)
+    icon_img = Column(Text)
+    hide_from_robots = Column(Boolean)
+    pref_show_snoovatar = Column(Boolean)
+    snoovatar_img = Column(Text)
+    accept_followers = Column(Boolean)
+    #has_verified_email = Column(Boolean)
+
+    version = relationship('AccountVersion', back_populates='detail')
+
+    @hybrid_property
+    def sun_detail_id(self):
+        return self.sun_account_detail_id
+
+    def to_dict(self):
+        return {
+            'sun_account_detail_id': self.sun_account_detail_id,
+            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'comment_karma': self.comment_karma,
+            'link_karma': self.link_karma,
+            'total_karma': self.total_karma,
+            'awardee_karma': self.awardee_karma,
+            'awarder_karma': self.awarder_karma,
+            'deleted': self.deleted,
+            'listing_use_sort': self.listing_use_sort,
+            'is_employee': self.is_employee,
+            'snoovatar_size': self.snoovatar_size,
+            'verified': self.verified,
+            'is_gold': self.is_gold,
+            'icon_img': self.icon_img,
+            'hide_from_robots': self.hide_from_robots,
+            'pref_show_snoovatar': self.pref_show_snoovatar,
+            'snoovatar_img': self.snoovatar_img,
+            'accept_followers': self.accept_followers,
+            'is_suspended': self.is_suspended,
+            #'has_verified_email': self.has_verified_email
+        }
+
 class Post(db.Model):
     __tablename__ = 'posts'
     __table_args__ = {'schema': 'posts'}
 
     sun_post_id = Column(BigInteger, primary_key=True, index=True)
-    sun_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.sun_subreddit_id'), nullable=False)
-    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'))
+    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=False)
+    sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     title = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
     approved_at_utc = Column(Text)
@@ -260,12 +404,28 @@ class Post(db.Model):
     def sun_unique_id(self):
         return self.sun_post_id
 
+    @property
+    def most_recent_detail(self):
+        return self.versions[-1].detail
+
+    @hybrid_property
+    def most_recent_version_updated_at(self):
+        return self.versions[-1].sun_created_at
+
+    @most_recent_version_updated_at.expression
+    def most_recent_version_updated_at(cls):
+        return select([PostVersion.sun_created_at])\
+                .where(PostVersion.sun_post_id == cls.sun_post_id)\
+                    .order_by(PostVersion.sun_created_at.desc()).limit(1).as_scalar()
+
     def __repr__(self):
         return f"SunPost({self.sun_post_id})"
     
     def to_dict(self):
         main_dict = {
             "sun_post_id" : self.sun_post_id,
+            "sun_account_id" : self.sun_account_id,
+            "sun_subreddit_id" : self.sun_subreddit_id,
             "sun_created_at" : self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             "reddit_post_id" : self.reddit_post_id,
             "reddit_account_id" : self.reddit_account_id,
@@ -281,10 +441,6 @@ class Post(db.Model):
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
     
-    @property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
-
 
 
     # This works but the init_on_load function conflicts with author for some reason
@@ -309,10 +465,10 @@ class PostVersion(db.Model):
         {'schema': 'posts'}
     )
 
-    sun_post_id = Column(BigInteger, ForeignKey('posts.posts.sun_post_id'), primary_key=True, nullable=False)
+    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), primary_key=True, nullable=False)
     sun_post_version_id = Column(BigInteger, primary_key=True, nullable=False)
     sun_post_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 
     post = relationship('Post', back_populates='versions')
     detail = relationship('PostDetail', uselist=False, back_populates='version')
@@ -330,8 +486,8 @@ class PostDetail(db.Model):
     __tablename__ = 'post_details'
     __table_args__ = {'schema': 'posts'}
 
-    sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_versions.sun_post_detail_id'), primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_post_detail_id = Column(BigInteger, ForeignKey(PostVersion.sun_post_detail_id), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     gilded = Column(BigInteger)
     selftext = Column(Text)
     downs = Column(BigInteger)
@@ -437,17 +593,23 @@ class PostDetail(db.Model):
         "selftext" : self.selftext,
         "downs" : self.downs,
         "ups" : self.ups,
-        "upvote_ratio" : self.upvote_ratio
+        "upvote_ratio" : self.upvote_ratio,
+        "num_comments" : self.num_comments,
+        "deleted" : self.deleted,
+        "author_has_subscribed" : self.author_has_subscribed,
+        "author_is_mod" : self.author_is_mod,
+        "edited" : self.edited,
+        "removed" : self.removed,
         }
     
 
 # class PostAwarding(db.Model):
 #     __tablename__ = 'awardings'
-#     __table_args__ = {'schema': 'posts'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_post_detail_id = Column(ForeignKey('post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     reddit_subreddit_id = Column(Text)
 #     giver_coin_reward = Column(Text)
 #     is_new = Column(Boolean)
@@ -482,11 +644,11 @@ class PostDetail(db.Model):
 
 # class PostGilding(db.Model):
 #     __tablename__ = 'gildings'
-#     __table_args__ = {'schema': 'posts'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_post_detail_id = Column(BigInteger, ForeignKey('post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     reddit_gid = Column(Text)
 #     value = Column(BigInteger)
 
@@ -495,11 +657,11 @@ class PostDetail(db.Model):
 
 # class PostMedia(db.Model):
 #     __tablename__ = 'media'
-#     __table_args__ = {'schema': 'posts'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_post_detail_id = Column(BigInteger, ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_post_detail_id = Column(BigInteger, ForeignKey('post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     media_type = Column(Text)
 #     oembed_provider_url = Column(Text)
 #     oembed_version = Column(Text)
@@ -530,11 +692,11 @@ class PostDetail(db.Model):
 
 # class PostMediaEmbed(db.Model):
 #     __tablename__ = 'media_embed'
-#     __table_args__ = {'schema': 'posts'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_media_embed_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_post_detail_id = Column(ForeignKey('post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     content = Column(Text)
 #     width = Column(Float(53))
 #     scrolling = Column(Boolean)
@@ -545,11 +707,11 @@ class PostDetail(db.Model):
 
 # class PostSecureMedia(db.Model):
 #     __tablename__ = 'secure_media'
-#     __table_args__ = {'schema': 'posts'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_secure_media_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_post_detail_id = Column(ForeignKey('posts.post_details.sun_post_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_post_detail_id = Column(ForeignKey('post_details.sun_post_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     type = Column(Text)
 #     oembed_provider_url = Column(Text)
 #     oembed_version = Column(Text)
@@ -577,136 +739,21 @@ class PostDetail(db.Model):
 
 #     detail = relationship('PostDetail', back_populates='secure_media')
     
-class Account(db.Model):
-    __tablename__ = 'accounts'
-    __table_args__ = {'schema': 'accounts'}
-
-    sun_account_id = Column(BigInteger, primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    name = Column(Text, nullable=False)
-    reddit_account_id = Column(Text)
-    created = Column(Float(53))
-    created_utc = Column(Float(53))
-
-    posts = relationship('Post', back_populates='author')
-    versions = relationship('AccountVersion', back_populates='account')
-
-    @hybrid_property
-    def reddit_unique_id(self):
-        return self.reddit_account_id
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_account_id
-
-    @property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
-
-    def __repr__(self):
-        return f'SunAccount({self.sun_account_id})'
-
-    def to_dict(self):
-        main_dict = {
-            'sun_account_id': self.sun_account_id,
-            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
-            'name': self.name,
-            'reddit_account_id': self.reddit_account_id,
-            'reddit_unique_id': self.reddit_unique_id,
-            'sun_unique_id': self.sun_unique_id
-        }
-        most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
-        return {**main_dict, **most_recent_detail_dict}
-
-class AccountVersion(db.Model):
-    __tablename__ = 'account_versions'
-    __table_args__ = (
-        Index('ix_accounts_account_versions', 'sun_account_id', 'sun_account_version_id', 'sun_account_detail_id'),
-        {'schema': 'accounts'}
-    )
-
-    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'), primary_key=True, nullable=False)
-    sun_account_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    sun_account_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-
-    account = relationship('Account', back_populates='versions')
-    detail = relationship('AccountDetail', uselist = False, back_populates='version')
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_account_id
-
-    @hybrid_property
-    def sun_version_id(self):
-        return self.sun_account_version_id
-
-class AccountDetail(db.Model):
-    __tablename__ = 'account_details'
-    __table_args__ = {'schema': 'accounts'}
-
-    sun_account_detail_id = Column(BigInteger, ForeignKey('accounts.account_versions.sun_account_detail_id'), unique = True, primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
-    comment_karma = Column(BigInteger)
-    link_karma = Column(BigInteger)
-    total_karma = Column(BigInteger)
-    awardee_karma = Column(BigInteger)
-    awarder_karma = Column(BigInteger)
-    deleted = Column(Boolean)
-    listing_use_sort = Column(Boolean)
-    is_employee = Column(Boolean)
-    snoovatar_size = Column(Text)
-    verified = Column(Boolean)
-    is_gold = Column(Boolean)
-    icon_img = Column(Text)
-    hide_from_robots = Column(Boolean)
-    pref_show_snoovatar = Column(Boolean)
-    snoovatar_img = Column(Text)
-    accept_followers = Column(Boolean)
-    #has_verified_email = Column(Boolean)
-
-    version = relationship('AccountVersion', back_populates='detail')
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_account_detail_id
-
-    def to_dict(self):
-        return {
-            'sun_account_detail_id': self.sun_account_detail_id,
-            'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
-            'comment_karma': self.comment_karma,
-            'link_karma': self.link_karma,
-            'total_karma': self.total_karma,
-            'awardee_karma': self.awardee_karma,
-            'awarder_karma': self.awarder_karma,
-            'listing_use_sort': self.listing_use_sort,
-            'is_employee': self.is_employee,
-            'snoovatar_size': self.snoovatar_size,
-            'verified': self.verified,
-            'is_gold': self.is_gold,
-            'icon_img': self.icon_img,
-            'hide_from_robots': self.hide_from_robots,
-            'pref_show_snoovatar': self.pref_show_snoovatar,
-            'snoovatar_img': self.snoovatar_img,
-            'accept_followers': self.accept_followers,
-            #'has_verified_email': self.has_verified_email
-        }
 
 class Comment(db.Model):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'comments'}
 
     sun_comment_id = Column(BigInteger, primary_key=True, index=True)
-    sun_post_id = Column(BigInteger, ForeignKey('posts.posts.sun_post_id'), nullable=False)
-    sun_subreddit_id = Column(BigInteger, ForeignKey('subreddits.subreddits.sun_subreddit_id'), nullable=False)
-    sun_account_id = Column(BigInteger, ForeignKey('accounts.accounts.sun_account_id'))
+    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=False)
+    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=False)
+    sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
     reddit_comment_id = Column(Text, nullable=False)
     reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     created_utc = Column(Numeric)
     depth = Column(BigInteger)
     permalink = Column(Text)
@@ -743,6 +790,16 @@ class Comment(db.Model):
     def most_recent_detail(self):
         return self.versions[-1].detail
 
+    @hybrid_property
+    def most_recent_version_updated_at(self):
+        return self.versions[-1].sun_created_at
+
+    @most_recent_version_updated_at.expression
+    def most_recent_version_updated_at(cls):
+        return select([CommentVersion.sun_created_at])\
+                .where(CommentVersion.sun_comment_id == cls.sun_comment_id)\
+                    .order_by(CommentVersion.sun_created_at.desc()).limit(1).as_scalar()
+
     def to_dict(self):
         main_dict = {
             'sun_comment_id': self.sun_comment_id,
@@ -774,10 +831,10 @@ class CommentVersion(db.Model):
         {'schema': 'comments'}
     )
 
-    sun_comment_id = Column(BigInteger, ForeignKey('comments.comments.sun_comment_id'), primary_key=True, nullable=False)
+    sun_comment_id = Column(BigInteger, ForeignKey(Comment.sun_comment_id), primary_key=True, nullable=False)
     sun_comment_version_id = Column(BigInteger, primary_key=True, nullable=False)
     sun_comment_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 
     comment = relationship('Comment', back_populates='versions')
     detail = relationship('CommentDetail', uselist=False, back_populates='version')
@@ -794,8 +851,8 @@ class CommentDetail(db.Model):
     __tablename__ = 'comment_details'
     __table_args__ = {'schema': 'comments'}
 
-    sun_comment_detail_id = Column(ForeignKey('comments.comment_versions.sun_comment_detail_id'), primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+    sun_comment_detail_id = Column(ForeignKey(CommentVersion.sun_comment_detail_id), primary_key=True, index=True)
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     controversiality = Column(BigInteger)
     ups = Column(BigInteger)
     downs = Column(BigInteger)
@@ -864,6 +921,8 @@ class CommentDetail(db.Model):
             'score': self.score,
             'body': self.body,
             'edited': self.edited,
+            'deleted': self.deleted,
+            'removed': self.removed,
             'author_cakeday': self.author_cakeday,
             'author_has_subscribed': self.author_has_subscribed,
             'author_is_mod': self.author_is_mod,
@@ -903,11 +962,11 @@ class CommentDetail(db.Model):
 
 # class CommentAwarding(db.Model):
 #     __tablename__ = 'awardings'
-#     __table_args__ = {'schema': 'comments'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_awarding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_comment_detail_id = Column(ForeignKey('comments.comment_details.sun_comment_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_comment_detail_id = Column(ForeignKey('comment_details.sun_comment_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     giver_coin_reward = Column(Text)
 #     is_new = Column(Boolean)
 #     days_of_drip_extension = Column(Text)
@@ -940,11 +999,11 @@ class CommentDetail(db.Model):
 
 # class CommentGilding(db.Model):
 #     __tablename__ = 'gildings'
-#     __table_args__ = {'schema': 'comments'}
+#     __table_args__ = {'schema': 'public'}
 
 #     sun_gilding_id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True, index=True)
-#     sun_comment_detail_id = Column(ForeignKey('comments.comment_details.sun_comment_detail_id'), nullable=False)
-#     sun_created_at = Column(DateTime, nullable=False, server_default=text('now()'))
+#     sun_comment_detail_id = Column(ForeignKey('comment_details.sun_comment_detail_id'), nullable=False)
+#     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
 #     reddit_gid = Column(Text)
 #     value = Column(Numeric)
 

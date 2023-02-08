@@ -14,7 +14,6 @@ config = context.config
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
-
 def get_engine():
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
@@ -58,7 +57,7 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
+        url=url, target_metadata=get_metadata(), literal_binds=True, include_schemas=True
     )
 
     with context.begin_transaction():
@@ -90,7 +89,8 @@ def run_migrations_online():
             connection=connection,
             target_metadata=get_metadata(),
             process_revision_directives=process_revision_directives,
-            **current_app.extensions['migrate'].configure_args
+            **current_app.extensions['migrate'].configure_args,
+            include_schemas=True
         )
 
         with context.begin_transaction():

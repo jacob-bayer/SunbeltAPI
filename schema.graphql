@@ -61,6 +61,8 @@ type Post {
     reddit_subreddit_id: String
     reddit_unique_id : String
     sun_unique_id: Int
+    sun_account_id: Int
+    sun_subreddit_id: Int
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
     title: String
@@ -76,6 +78,10 @@ type Post {
     most_recent_upvote_ratio : Float
     most_recent_created_utc : Float
     most_recent_selftext : String
+    most_recent_num_comments : Int
+    most_recent_deleted : Boolean
+    most_recent_edited : Boolean
+    most_recent_removed: Boolean
 }
 
 type PostDetail {
@@ -90,6 +96,18 @@ type PostDetail {
     downs : Int
     ups : Int
     upvote_ratio : Float
+    score : Int
+    num_comments : Int
+    created_utc : Float
+    deleted : Boolean
+    edited : Boolean
+    removed: Boolean
+    post_type : String
+    author_cakeday : Boolean
+    author_has_subscribed : Boolean
+    author_is_mod : Boolean
+    author_flair_type : String
+    total_awards_received : String
 }
 
 type Comment {
@@ -121,6 +139,8 @@ type Comment {
     most_recent_score: Int,
     most_recent_body: String,
     most_recent_edited: Int,
+    most_recent_deleted: Boolean,
+    most_recent_removed: Boolean,
     most_recent_author_cakeday: Boolean,
     most_recent_author_has_subscribed: Boolean,
     most_recent_author_is_mod: Boolean,
@@ -168,6 +188,18 @@ type CommentDetail {
     downs : Int
     ups : Int
     upvote_ratio : Float
+    score : Int
+    controversiality : Int
+    deleted : Boolean
+    edited : Boolean
+    removed: Boolean
+    author_cakeday : Boolean
+    author_has_subscribed : Boolean
+    author_is_mod : Boolean
+    comment_type : String
+    author_flair_type : String
+    total_awards_received : String
+    author_flair_template_id : String
 }
 
 type Account {
@@ -192,6 +224,8 @@ type Account {
     most_recent_is_gold: Boolean
     most_recent_icon_img: String
     most_recent_hide_from_robots: Boolean
+    most_recent_deleted: Boolean
+    most_recent_is_suspended: Boolean
 }
 
 type AccountDetail {
@@ -200,6 +234,8 @@ type AccountDetail {
     sun_version_id: Int!
     sun_unique_id: Int!
     sun_created_at : String
+    deleted : Boolean
+    is_suspended : Boolean
     comment_karma : Int
     link_karma : Int
     total_karma : Int
