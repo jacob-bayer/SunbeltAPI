@@ -68,6 +68,8 @@ class Subreddit(db.Model):
             'created': self.created,
             'lang': self.lang,
             'created_utc': self.created_utc,
+            'version_count': len(self.versions),
+            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
         }
         most_recent_details_dict = {'most_recent_' + key: value for key, value in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
@@ -96,6 +98,29 @@ class SubredditVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_subreddit_version_id
+
+    # TODO:
+    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
+    # So that the detail has the version id
+    # This will make it easier to move variables like removed, edited, deleted to the main table
+    # As a workaround, the below works
+
+
+    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
+    # This essentially makes the version usable as a detail
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.init_on_load()
+
+    @reconstructor
+    def init_on_load(self):
+        if self.detail:
+            detail_vars = self.detail.to_dict()
+            for var, value in detail_vars.items():
+                if not hasattr(self, var):
+                    setattr(self, var, value)
+
 
 class SubredditDetail(db.Model):
     __tablename__ = 'subreddit_details'
@@ -281,7 +306,10 @@ class Account(db.Model):
             'name': self.name,
             'reddit_account_id': self.reddit_account_id,
             'reddit_unique_id': self.reddit_unique_id,
-            'sun_unique_id': self.sun_unique_id
+            'sun_unique_id': self.sun_unique_id,
+            'version_count': len(self.versions),
+            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+
         }
         most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_detail_dict}
@@ -308,6 +336,29 @@ class AccountVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_account_version_id
+
+    # TODO:
+    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
+    # So that the detail has the version id
+    # This will make it easier to move variables like removed, edited, deleted to the main table
+    # As a workaround, the below works
+
+
+    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
+    # This essentially makes the version usable as a detail
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.init_on_load()
+
+    @reconstructor
+    def init_on_load(self):
+        if self.detail:
+            detail_vars = self.detail.to_dict()
+            for var, value in detail_vars.items():
+                if not hasattr(self, var):
+                    setattr(self, var, value)
+
 
 class AccountDetail(db.Model):
     __tablename__ = 'account_details'
@@ -436,7 +487,15 @@ class Post(db.Model):
             "permalink" : self.permalink,
             "author" : self.author.to_dict() if self.author else None,
             "versions" : [v.detail.to_dict() for v in self.versions],
-            "subreddit" : self.subreddit.to_dict()
+            "subreddit" : self.subreddit.to_dict(),
+            "removed" : any([version.removed for version in self.versions]),
+            "edited" : any([version.edited for version in self.versions]),
+            "deleted" : any([version.deleted for version in self.versions]),
+            "selftext" : self.most_recent_detail.selftext,
+            "score" : self.most_recent_detail.score,
+            "version_count" : len(self.versions),
+            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+
         }
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
@@ -480,6 +539,28 @@ class PostVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_post_version_id
+
+    # TODO:
+    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
+    # So that the detail has the version id
+    # This will make it easier to move variables like removed, edited, deleted to the main table
+    # As a workaround, the below works
+
+
+    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
+    # This essentially makes the version usable as a detail
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.init_on_load()
+
+    @reconstructor
+    def init_on_load(self):
+        if self.detail:
+            detail_vars = self.detail.to_dict()
+            for var, value in detail_vars.items():
+                if not hasattr(self, var):
+                    setattr(self, var, value)
 
 
 class PostDetail(db.Model):
@@ -820,11 +901,20 @@ class Comment(db.Model):
             'is_submitter': self.is_submitter,
             'created': float(self.created),
             'author': self.author.to_dict() if self.author else None,
+            "removed" : any([version.removed for version in self.versions]),
+            "edited" : any([version.edited for version in self.versions]),
+            "deleted" : any([version.deleted for version in self.versions]),
+            "body" : self.most_recent_detail.body,
+            "score" : self.most_recent_detail.score,
+            "version_count" : len(self.versions),
+            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+
         }
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
 
 class CommentVersion(db.Model):
+
     __tablename__ = 'comment_versions'
     __table_args__ = (
         Index('ix_comments_comment_versions', 'sun_comment_id', 'sun_comment_version_id', 'sun_comment_detail_id'),
@@ -846,6 +936,31 @@ class CommentVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_comment_version_id
+
+
+    # TODO:
+    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
+    # So that the detail has the version id
+    # This will make it easier to move variables like removed, edited, deleted to the main table
+    # As a workaround, the below works
+
+
+    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
+    # This essentially makes the version usable as a detail
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.init_on_load()
+
+    @reconstructor
+    def init_on_load(self):
+        if self.detail:
+            detail_vars = self.detail.to_dict()
+            for var, value in detail_vars.items():
+                if not hasattr(self, var):
+                    setattr(self, var, value)
+
+
 
 class CommentDetail(db.Model):
     __tablename__ = 'comment_details'
@@ -1008,3 +1123,12 @@ class CommentDetail(db.Model):
 #     value = Column(Numeric)
 
 #     detail = relationship('CommentDetail', back_populates='gildings')
+
+
+# # Tables for crawler
+# def CrawlerSubredditStatus(db.model):
+#     __tablename__ = 'subreddits'
+#     __table_args__ = {'schema': 'crawler_status'}
+
+#     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), primary_key=True, index=True)
+#     last_crawled_

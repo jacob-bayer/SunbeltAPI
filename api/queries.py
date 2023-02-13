@@ -4,6 +4,7 @@
 from .models import *
 from ariadne import convert_kwargs_to_snake_case
 from datetime import datetime
+from sqlalchemy import func
 
 ######### POSTS ###########
 
@@ -23,12 +24,15 @@ def resolve_posts(obj, info, **kwargs):
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
     order_by = kwargs.get('order_by')
+    reddit_ids = kwargs.get('reddit_ids')
 
     posts = Post.query
 
     if order_by: # Not sure this is necessary anymore
         posts = posts.join(PostVersion)
 
+    if reddit_ids:
+        posts = posts.filter(Post.reddit_post_id.in_(reddit_ids))
 
     if updated_before:
         updated_before = convert_date(updated_before)
@@ -173,6 +177,7 @@ def resolve_comments(obj, info, **kwargs):
     commented_after = kwargs.get('commented_after')
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
+    reddit_ids = kwargs.get('reddit_ids')
     order_by = kwargs.get('order_by')
     sun_post_id = kwargs.get('sun_post_id')
 
@@ -180,6 +185,9 @@ def resolve_comments(obj, info, **kwargs):
 
     if order_by: # Not sure this is necessary anymore
         comments = comments.join(CommentVersion)
+
+    if reddit_ids:
+        posts = posts.filter(Post.reddit_post_id.in_(reddit_ids))
 
     if updated_before:
         updated_before = convert_date(updated_before)
@@ -476,10 +484,18 @@ def resolve_subreddits(obj, info, **kwargs):
         created_after = kwargs.get('created_after')
         updated_before = kwargs.get('updated_before')
         updated_after = kwargs.get('updated_after')
+        reddit_ids = kwargs.get('reddit_ids')
+        names = kwargs.get('names')
         order_by = kwargs.get('order_by')
 
         subreddits = Subreddit.query
         
+        if names:
+            subreddits = subreddits.filter(Subreddit.display_name.in_(names))
+
+        if reddit_ids:
+            subreddits = subreddits.filter(Subreddit.reddit_subreddit_id.in_(reddit_ids))
+
         if updated_before:
             updated_before = convert_date(updated_before)
             subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at < updated_before)
@@ -529,6 +545,7 @@ def resolve_subreddits(obj, info, **kwargs):
 def resolve_subreddit(obj, info, **kwargs):
     by_id = kwargs.get('by_id')
     reddit_id = kwargs.get('reddit_id')
+    name = kwargs.get('name')
     errors = []
 
     if by_id:
@@ -543,6 +560,12 @@ def resolve_subreddit(obj, info, **kwargs):
             errors += [f"No subreddits found with reddit_id {reddit_id}"]
         else:
             subreddit = subreddit[0]
+
+    if name:
+        subreddit = Subreddit.query.filter(func.lower(Subreddit.display_name)==name).first()
+        if not subreddit:
+            errors += [f"No subreddits found with name {name}"]
+
 
     if not errors:
         payload = {

@@ -28,6 +28,7 @@ type Subreddit {
     created: Float
     lang: String
     created_utc: Float
+    version_count: Int
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
     most_recent_sun_created_at: String
@@ -35,6 +36,7 @@ type Subreddit {
     most_recent_accounts_active: Int
     most_recent_public_traffic: Boolean
     most_recent_subscribers: Int
+    most_recent_version_updated_at: String
 
 }
 
@@ -71,17 +73,20 @@ type Post {
     subreddit : Subreddit
     versions : [PostDetail]
     sun_created_at : String
+    deleted : Boolean
+    edited : Boolean
+    removed: Boolean
+    score : Int
+    version_count: Int
+    most_recent_selftext : String
     most_recent_detail : PostDetail
     most_recent_ups : Int
     most_recent_downs : Int
-    most_recent_score : Int
     most_recent_upvote_ratio : Float
     most_recent_created_utc : Float
-    most_recent_selftext : String
     most_recent_num_comments : Int
-    most_recent_deleted : Boolean
-    most_recent_edited : Boolean
-    most_recent_removed: Boolean
+    most_recent_version_updated_at : String
+
 }
 
 type PostDetail {
@@ -128,53 +133,55 @@ type Comment {
     permalink: String
     is_submitter: Boolean
     created: Float
-    most_recent_sun_comment_detail_id: Int,
-    most_recent_sun_comment_version_id: Int,
-    most_recent_sun_detail_id: Int,
-    most_recent_sun_version_id: Int,
-    most_recent_sun_created_at: String,
-    most_recent_controversiality: String,
-    most_recent_ups: Int,
-    most_recent_downs: Int,
-    most_recent_score: Int,
-    most_recent_body: String,
-    most_recent_edited: Int,
-    most_recent_deleted: Boolean,
-    most_recent_removed: Boolean,
-    most_recent_author_cakeday: Boolean,
-    most_recent_author_has_subscribed: Boolean,
-    most_recent_author_is_mod: Boolean,
-    most_recent_comment_type: String,
-    most_recent_author_flair_type: String,
-    most_recent_total_awards_received: String,
-    most_recent_author_flair_template_id: String,
-    most_recent_mod_reason_title: String,
-    most_recent_gilded: String,
-    most_recent_archived: Boolean,
-    most_recent_collapsed_reason_code: String,
-    most_recent_no_follow: Boolean,
-    most_recent_can_mod_post: Boolean,
-    most_recent_send_replies: Boolean,
-    most_recent_mod_note: String,
-    most_recent_collapsed: Boolean,
-    most_recent_top_awarded_type: String,
-    most_recent_author_flair_css_class: String,
-    most_recent_author_patreon_flair: Boolean,
-    most_recent_body_html: String,
-    most_recent_removal_reason: String,
-    most_recent_collapsed_reason: String,
-    most_recent_distinguished: String,
-    most_recent_associated_award: String,
-    most_recent_stickied: Boolean,
-    most_recent_author_premium: Boolean,
-    most_recent_can_gild: Boolean,
-    most_recent_unrepliable_reason: String,
-    most_recent_author_flair_text_color: String,
-    most_recent_score_hidden: Boolean,
-    most_recent_subreddit_type: String,
-    most_recent_locked: Boolean,
-    most_recent_report_reasons: String,
+    version_count: Int
+    most_recent_sun_comment_detail_id: Int
+    most_recent_sun_comment_version_id: Int
+    most_recent_sun_detail_id: Int
+    most_recent_sun_version_id: Int
+    most_recent_sun_created_at: String
+    most_recent_controversiality: String
+    most_recent_ups: Int
+    most_recent_downs: Int
+    score: Int
+    body: String
+    edited: Int
+    deleted: Boolean
+    removed: Boolean
+    most_recent_author_cakeday: Boolean
+    most_recent_author_has_subscribed: Boolean
+    most_recent_author_is_mod: Boolean
+    most_recent_comment_type: String
+    most_recent_author_flair_type: String
+    most_recent_total_awards_received: String
+    most_recent_author_flair_template_id: String
+    most_recent_mod_reason_title: String
+    most_recent_gilded: String
+    most_recent_archived: Boolean
+    most_recent_collapsed_reason_code: String
+    most_recent_no_follow: Boolean
+    most_recent_can_mod_post: Boolean
+    most_recent_send_replies: Boolean
+    most_recent_mod_note: String
+    most_recent_collapsed: Boolean
+    most_recent_top_awarded_type: String
+    most_recent_author_flair_css_class: String
+    most_recent_author_patreon_flair: Boolean
+    most_recent_body_html: String
+    most_recent_removal_reason: String
+    most_recent_collapsed_reason: String
+    most_recent_distinguished: String
+    most_recent_associated_award: String
+    most_recent_stickied: Boolean
+    most_recent_author_premium: Boolean
+    most_recent_can_gild: Boolean
+    most_recent_unrepliable_reason: String
+    most_recent_author_flair_text_color: String
+    most_recent_score_hidden: Boolean
+    most_recent_subreddit_type: String
+    most_recent_locked: Boolean
+    most_recent_report_reasons: String
     most_recent_author_flair_text: String
+    most_recent_version_updated_at: String
 }
 
 type CommentDetail {
@@ -208,6 +215,7 @@ type Account {
     reddit_unique_id : String
     sun_unique_id: Int
     name: String
+    version_count: Int
     reddit_account_id: String
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
@@ -226,6 +234,7 @@ type Account {
     most_recent_hide_from_robots: Boolean
     most_recent_deleted: Boolean
     most_recent_is_suspended: Boolean
+    most_recent_version_updated_at: String
 }
 
 type AccountDetail {
@@ -358,7 +367,8 @@ type Query {
     post(byId: ID, reddit_id: String): PostResult!
     postdetail(byId: ID!): PostDetailResult!
     postdetails(sun_unique_id: Int, sun_post_id: Int): PostDetailsResult!
-    posts(postedBefore: String,
+    posts(reddit_ids: [String],
+          postedBefore: String,
           postedAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
@@ -383,10 +393,12 @@ type Query {
           updatedAfter: String,
           orderBy: OrderByInput): AccountsResult!
 
-    subreddit(byId: ID, reddit_id: String): SubredditResult!
+    subreddit(byId: ID, reddit_id: String, name: String): SubredditResult!
     subredditdetail(byId: ID!): SubredditDetailResult!
     subredditdetails(sun_unique_id: Int, sun_subreddit_id: Int): SubredditDetailsResult!
-    subreddits(createdBefore: String,
+    subreddits(
+          names: [String],
+          createdBefore: String,
           createdAfter: String,
           updatedBefore: String, 
           updatedAfter: String,

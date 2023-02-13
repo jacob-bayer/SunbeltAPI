@@ -1,4 +1,5 @@
 from .model_lookup import lookup_dict
+from .models import *
 from ariadne import convert_kwargs_to_snake_case
 import json
 from main import db
@@ -9,6 +10,7 @@ et = pytz.timezone('US/Eastern')
 
 def create_object(kind, from_dict):
     # Returns bool indicating whether a new version of the object should be created
+
     def set_sun_ids(kind, obj_dict_to_update):
         should_write = True
 
@@ -77,6 +79,11 @@ def create_object(kind, from_dict):
                 create_object('subreddit', subreddit)
                 from_dict['sun_subreddit_id'] = subreddit['sun_subreddit_id']
 
+            elif from_dict.get('reddit_subreddit_id'):
+                subreddit = Subreddit.query.filter_by(reddit_subreddit_id = from_dict['reddit_subreddit_id']).first()
+                if subreddit:
+                    from_dict['sun_subreddit_id'] = subreddit.sun_subreddit_id
+
         author = from_dict.get('author')
         if author:
             if not isinstance(author, dict):
@@ -91,16 +98,24 @@ def create_object(kind, from_dict):
             from_dict['removed'] = from_dict['body'] == '[removed]'
             from_dict['deleted'] = from_dict['body'] == '[deleted]'
 
+            # It shouldn't have the post in most cases
             post = from_dict.get('post')
             if post:
                 create_object('post', post)
                 from_dict['sun_post_id'] = post['sun_post_id']
                 from_dict['sun_subreddit_id'] = post['sun_subreddit_id']
+            elif from_dict.get('reddit_post_id'):
+                breakpoint()
+                post = Post.query.filter_by(reddit_post_id = from_dict['reddit_post_id']).first()
+                if post:
+                    from_dict['sun_post_id'] = post.sun_post_id
+                    from_dict['sun_subreddit_id'] = post.sun_subreddit_id
     
     
     models = lookup_dict[kind]
 
     should_write = set_sun_ids(kind, from_dict)
+
     if should_write:
 
 
@@ -112,14 +127,15 @@ def create_object(kind, from_dict):
             db_obj = model(**values)
             db.session.add(db_obj)
 
-
         for table, model in models.items():
             if not v1 and table == 'main':
                 continue
             add_to_db(from_dict, model)
 
+        
     try:
         db.session.commit()
+
         final_result = models['main'].query.get(from_dict[f'sun_{kind}_id'])
         payload = {'success': True,
                     kind : final_result.to_dict(),
