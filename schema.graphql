@@ -144,6 +144,7 @@ type Comment {
     most_recent_downs: Int
     score: Int
     body: String
+    most_recent_body: String
     edited: Int
     deleted: Boolean
     removed: Boolean

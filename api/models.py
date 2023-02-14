@@ -420,7 +420,7 @@ class Post(db.Model):
     __table_args__ = {'schema': 'posts'}
 
     sun_post_id = Column(BigInteger, primary_key=True, index=True)
-    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=False)
+    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
@@ -648,6 +648,7 @@ class PostDetail(db.Model):
     author_patreon_flair = Column(Boolean)
     author_flair_text_color = Column(Text)
     link_flair_template_id = Column(Text)
+    source_is_pushshift = Column(Boolean, nullable=False, server_default=text('false'))
 
     # awardings = relationship('PostAwarding', back_populates='detail')
     # gildings = relationship('PostGilding', back_populates='detail')
@@ -826,8 +827,8 @@ class Comment(db.Model):
     __table_args__ = {'schema': 'comments'}
 
     sun_comment_id = Column(BigInteger, primary_key=True, index=True)
-    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=False)
-    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=False)
+    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=True) 
+    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
     reddit_comment_id = Column(Text, nullable=False)
     reddit_parent_id = Column(Text)
@@ -1012,6 +1013,7 @@ class CommentDetail(db.Model):
     author_flair_text = Column(Text)
     author_flair_background_color = Column(Text)
     collapsed_because_crowd_control = Column(Text)
+    source_is_pushshift = Column(Boolean, nullable=False, server_default=text('false'))
 
     # awardings = relationship('CommentAwarding', back_populates='detail')
     # gildings = relationship('CommentGilding', back_populates='detail')

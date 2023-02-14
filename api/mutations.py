@@ -90,8 +90,11 @@ def create_object(kind, from_dict):
                 author = {'reddit_account_id': from_dict['reddit_account_id'],
                           'name': from_dict['author']}
             create_object('account', author)
-            sun_account_id = author['sun_account_id']
-            from_dict['sun_account_id'] = sun_account_id
+            from_dict['sun_account_id'] = author['sun_account_id']
+        elif from_dict.get('reddit_account_id'):
+            account = Account.query.filter_by(reddit_account_id = from_dict['reddit_account_id']).first()
+            if account:
+                from_dict['sun_account_id'] = account.sun_account_id
 
 
         if kind == 'comment':
@@ -105,7 +108,6 @@ def create_object(kind, from_dict):
                 from_dict['sun_post_id'] = post['sun_post_id']
                 from_dict['sun_subreddit_id'] = post['sun_subreddit_id']
             elif from_dict.get('reddit_post_id'):
-                breakpoint()
                 post = Post.query.filter_by(reddit_post_id = from_dict['reddit_post_id']).first()
                 if post:
                     from_dict['sun_post_id'] = post.sun_post_id
