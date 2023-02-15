@@ -69,6 +69,7 @@ def graphql_server():
     return jsonify(result), status_code
 
 
+# The purpose of this is to try to run the app and get package dependency errors
 if __name__ == '__main__':
     app.run(debug=True)
 
