@@ -16,7 +16,7 @@ enum Sort {
 }
 
 type Subreddit {
-    sun_subreddit_id: ID!
+    sun_subreddit_id: Int!
     reddit_subreddit_id: String
     reddit_unique_id : String
     sun_unique_id: Int
@@ -41,7 +41,7 @@ type Subreddit {
 }
 
 type SubredditDetail {
-    sun_subreddit_detail_id : ID!
+    sun_subreddit_detail_id : Int!
     sun_created_at: String
     sun_detail_id : Int!
     sun_version_id: Int!
@@ -57,7 +57,7 @@ type SubredditDetail {
 }
 
 type Post {
-    sun_post_id: ID!
+    sun_post_id: Int!
     reddit_post_id: String
     reddit_account_id: String
     reddit_subreddit_id: String
@@ -90,7 +90,7 @@ type Post {
 }
 
 type PostDetail {
-    sun_post_detail_id : ID!
+    sun_post_detail_id : Int!
     sun_post_version_id: Int!
     sun_post_id: Int!
     sun_detail_id : Int!
@@ -116,7 +116,7 @@ type PostDetail {
 }
 
 type Comment {
-    sun_comment_id: ID!
+    sun_comment_id: Int!
     sun_post_id: Int
     sun_subreddit_id: Int
     sun_account_id: Int
@@ -186,7 +186,7 @@ type Comment {
 }
 
 type CommentDetail {
-    sun_comment_detail_id : ID!
+    sun_comment_detail_id : Int!
     sun_comment_version_id: Int!
     sun_detail_id : Int!
     sun_version_id: Int!
@@ -211,7 +211,7 @@ type CommentDetail {
 }
 
 type Account {
-    sun_account_id: ID!
+    sun_account_id: Int!
     sun_created_at: String
     reddit_unique_id : String
     sun_unique_id: Int
@@ -239,7 +239,7 @@ type Account {
 }
 
 type AccountDetail {
-    sun_account_detail_id : ID!
+    sun_account_detail_id : Int!
     sun_detail_id : Int!
     sun_version_id: Int!
     sun_unique_id: Int!
@@ -366,7 +366,7 @@ type SubredditDetailsResult {
 
 type Query {
     post(byId: ID, reddit_id: String): PostResult!
-    postdetail(byId: ID!): PostDetailResult!
+    postdetail(byId: Int!): PostDetailResult!
     postdetails(sun_unique_id: Int, sun_post_id: Int): PostDetailsResult!
     posts(reddit_ids: [String],
           postedBefore: String,
@@ -376,7 +376,7 @@ type Query {
           orderBy: OrderByInput): PostsResult!
 
     comment(byId: ID, reddit_id: String): CommentResult!
-    commentdetail(byId: ID!): CommentDetailResult!
+    commentdetail(byId: Int!): CommentDetailResult!
     commentdetails(sun_unique_id: Int, sun_comment_id: Int): CommentDetailsResult!
     comments(commentedBefore: String,
           commentedAfter: String,
@@ -386,7 +386,7 @@ type Query {
           sun_post_id: Int): CommentsResult!
 
     account(byId: ID, reddit_id: String, name: String): AccountResult!
-    accountdetail(byId: ID!): AccountDetailResult!
+    accountdetail(byId: Int!): AccountDetailResult!
     accountdetails(sun_unique_id: Int, sun_account_id: Int): AccountDetailsResult!
     accounts(createdBefore: String,
           createdAfter: String,
@@ -395,7 +395,7 @@ type Query {
           orderBy: OrderByInput): AccountsResult!
 
     subreddit(byId: ID, reddit_id: String, name: String): SubredditResult!
-    subredditdetail(byId: ID!): SubredditDetailResult!
+    subredditdetail(byId: Int!): SubredditDetailResult!
     subredditdetails(sun_unique_id: Int, sun_subreddit_id: Int): SubredditDetailsResult!
     subreddits(
           names: [String],
