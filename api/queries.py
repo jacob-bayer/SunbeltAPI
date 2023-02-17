@@ -491,7 +491,7 @@ def resolve_subreddits(obj, info, **kwargs):
         subreddits = Subreddit.query
         
         if names:
-            subreddits = subreddits.filter(Subreddit.display_name.in_(names))
+            subreddits = subreddits.filter(func.lower(Subreddit.display_name).in_(names))
 
         if reddit_ids:
             subreddits = subreddits.filter(Subreddit.reddit_subreddit_id.in_(reddit_ids))
