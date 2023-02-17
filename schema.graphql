@@ -29,6 +29,7 @@ type Subreddit {
     lang: String
     created_utc: Float
     version_count: Int
+    versions: [SubredditDetail]
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
     most_recent_sun_created_at: String
@@ -148,6 +149,8 @@ type Comment {
     edited: Int
     deleted: Boolean
     removed: Boolean
+    versions: [CommentDetail]
+    author: Account
     most_recent_author_cakeday: Boolean
     most_recent_author_has_subscribed: Boolean
     most_recent_author_is_mod: Boolean

@@ -70,6 +70,7 @@ class Subreddit(db.Model):
             'created_utc': self.created_utc,
             'version_count': len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'versons': [version.detail.to_dict() for version in self.versions],
         }
         most_recent_details_dict = {'most_recent_' + key: value for key, value in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
@@ -309,6 +310,7 @@ class Account(db.Model):
             'sun_unique_id': self.sun_unique_id,
             'version_count': len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'versions': [v.detail.to_dict() for v in self.versions],
 
         }
         most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
@@ -905,6 +907,7 @@ class Comment(db.Model):
             "removed" : any([version.removed for version in self.versions]),
             "edited" : any([version.edited for version in self.versions]),
             "deleted" : any([version.deleted for version in self.versions]),
+            "versions" : [version.detail.to_dict() for version in self.versions],
             "body" : self.most_recent_detail.body,
             "score" : self.most_recent_detail.score,
             "version_count" : len(self.versions),

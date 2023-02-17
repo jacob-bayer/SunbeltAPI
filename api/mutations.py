@@ -6,8 +6,6 @@ from main import db
 from datetime import datetime, timedelta
 import pytz
 
-et = pytz.timezone('US/Eastern')
-
 def create_object(kind, from_dict):
     # Returns bool indicating whether a new version of the object should be created
 
@@ -62,8 +60,9 @@ def create_object(kind, from_dict):
 
             obj_dict_to_update[f'sun_{kind}_version_id'] = last_version_id + 1
 
-            mins_ago = datetime.now() - timedelta(minutes = 15)
+            mins_ago = datetime.utcnow() - timedelta(minutes = 15)
             should_write = last_version.sun_created_at < mins_ago
+
 
         return should_write
 
