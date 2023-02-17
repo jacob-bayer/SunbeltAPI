@@ -474,6 +474,10 @@ class Post(db.Model):
     def __repr__(self):
         return f"SunPost({self.sun_post_id})"
     
+    @property
+    def comments(self):
+        return [c.to_dict() for c in self.comments]
+
     def to_dict(self):
         main_dict = {
             "sun_post_id" : self.sun_post_id,
@@ -497,7 +501,6 @@ class Post(db.Model):
             "score" : self.most_recent_detail.score,
             "version_count" : len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-
         }
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
@@ -846,6 +849,7 @@ class Comment(db.Model):
 
     author = relationship('Account')
     versions = relationship('CommentVersion', back_populates='comment')
+    post = relationship('Post')
 
     def __repr__(self):
         return f'SunComment({self.sun_comment_id})'
@@ -910,9 +914,12 @@ class Comment(db.Model):
             "versions" : [version.detail.to_dict() for version in self.versions],
             "body" : self.most_recent_detail.body,
             "score" : self.most_recent_detail.score,
+            "ups" : self.most_recent_detail.ups,
+            "downs" : self.most_recent_detail.downs,
+            "gilded" : self.most_recent_detail.gilded,
             "version_count" : len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-
+            "post" : self.post.to_dict() if self.post else None,
         }
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}

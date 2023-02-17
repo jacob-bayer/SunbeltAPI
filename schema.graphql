@@ -141,6 +141,8 @@ type Comment {
     most_recent_sun_version_id: Int
     most_recent_sun_created_at: String
     most_recent_controversiality: String
+    ups: Int
+    downs: Int
     most_recent_ups: Int
     most_recent_downs: Int
     score: Int
@@ -151,6 +153,7 @@ type Comment {
     removed: Boolean
     versions: [CommentDetail]
     author: Account
+    post: Post
     most_recent_author_cakeday: Boolean
     most_recent_author_has_subscribed: Boolean
     most_recent_author_is_mod: Boolean
@@ -186,6 +189,7 @@ type Comment {
     most_recent_report_reasons: String
     most_recent_author_flair_text: String
     most_recent_version_updated_at: String
+    most_recent_upvote_ratio : Float
 }
 
 type CommentDetail {
