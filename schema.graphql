@@ -154,6 +154,7 @@ type Comment {
     versions: [CommentDetail]
     author: Account
     post: Post
+    subreddit: Subreddit
     most_recent_author_cakeday: Boolean
     most_recent_author_has_subscribed: Boolean
     most_recent_author_is_mod: Boolean

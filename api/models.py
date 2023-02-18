@@ -850,6 +850,7 @@ class Comment(db.Model):
     author = relationship('Account')
     versions = relationship('CommentVersion', back_populates='comment')
     post = relationship('Post')
+    subreddit = relationship('Subreddit')
 
     def __repr__(self):
         return f'SunComment({self.sun_comment_id})'
@@ -920,6 +921,7 @@ class Comment(db.Model):
             "version_count" : len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
             "post" : self.post.to_dict() if self.post else None,
+            "subreddit" : self.subreddit.to_dict() if self.subreddit else None,
         }
         most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
