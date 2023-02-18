@@ -5,9 +5,6 @@ schema {
 
 input OrderByInput {
   sun_unique_id: Sort
-  most_recent_sun_version_id: Sort
-  most_recent_sun_detail_id: Sort
-  most_recent_score: Sort
 }
 
 enum Sort {
@@ -30,14 +27,13 @@ type Subreddit {
     created_utc: Float
     version_count: Int
     versions: [SubredditDetail]
+    active_user_count: Int
+    accounts_active: Int
+    public_traffic: Boolean
+    subscribers: Int
+    most_recent_version_updated_at: String
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
-    most_recent_sun_created_at: String
-    most_recent_active_user_count: Int
-    most_recent_accounts_active: Int
-    most_recent_public_traffic: Boolean
-    most_recent_subscribers: Int
-    most_recent_version_updated_at: String
 
 }
 
@@ -79,13 +75,13 @@ type Post {
     removed: Boolean
     score : Int
     version_count: Int
-    most_recent_selftext : String
-    most_recent_detail : PostDetail
-    most_recent_ups : Int
-    most_recent_downs : Int
-    most_recent_upvote_ratio : Float
-    most_recent_created_utc : Float
-    most_recent_num_comments : Int
+    selftext : String
+    detail : PostDetail
+    ups : Int
+    downs : Int
+    upvote_ratio : Float
+    created_utc : Float
+    num_comments : Int
     most_recent_version_updated_at : String
 
 }
@@ -128,6 +124,8 @@ type Comment {
     reddit_post_id: String
     reddit_account_id: String
     reddit_subreddit_id: String
+    most_recent_sun_version_id: Int
+    most_recent_sun_detail_id: Int
     sun_created_at: String
     created_utc: Float
     depth: String
@@ -135,19 +133,11 @@ type Comment {
     is_submitter: Boolean
     created: Float
     version_count: Int
-    most_recent_sun_comment_detail_id: Int
-    most_recent_sun_comment_version_id: Int
-    most_recent_sun_detail_id: Int
-    most_recent_sun_version_id: Int
-    most_recent_sun_created_at: String
-    most_recent_controversiality: String
     ups: Int
     downs: Int
-    most_recent_ups: Int
-    most_recent_downs: Int
     score: Int
     body: String
-    most_recent_body: String
+    controversiality: Int
     edited: Int
     deleted: Boolean
     removed: Boolean
@@ -155,42 +145,42 @@ type Comment {
     author: Account
     post: Post
     subreddit: Subreddit
-    most_recent_author_cakeday: Boolean
-    most_recent_author_has_subscribed: Boolean
-    most_recent_author_is_mod: Boolean
-    most_recent_comment_type: String
-    most_recent_author_flair_type: String
-    most_recent_total_awards_received: String
-    most_recent_author_flair_template_id: String
-    most_recent_mod_reason_title: String
-    most_recent_gilded: String
-    most_recent_archived: Boolean
-    most_recent_collapsed_reason_code: String
-    most_recent_no_follow: Boolean
-    most_recent_can_mod_post: Boolean
-    most_recent_send_replies: Boolean
-    most_recent_mod_note: String
-    most_recent_collapsed: Boolean
-    most_recent_top_awarded_type: String
-    most_recent_author_flair_css_class: String
-    most_recent_author_patreon_flair: Boolean
-    most_recent_body_html: String
-    most_recent_removal_reason: String
-    most_recent_collapsed_reason: String
-    most_recent_distinguished: String
-    most_recent_associated_award: String
-    most_recent_stickied: Boolean
-    most_recent_author_premium: Boolean
-    most_recent_can_gild: Boolean
-    most_recent_unrepliable_reason: String
-    most_recent_author_flair_text_color: String
-    most_recent_score_hidden: Boolean
-    most_recent_subreddit_type: String
-    most_recent_locked: Boolean
-    most_recent_report_reasons: String
-    most_recent_author_flair_text: String
+    author_cakeday: Boolean
+    author_has_subscribed: Boolean
+    author_is_mod: Boolean
+    comment_type: String
+    author_flair_type: String
+    total_awards_received: String
+    author_flair_template_id: String
+    mod_reason_title: String
+    gilded: String
+    archived: Boolean
+    collapsed_reason_code: String
+    no_follow: Boolean
+    can_mod_post: Boolean
+    send_replies: Boolean
+    mod_note: String
+    collapsed: Boolean
+    top_awarded_type: String
+    author_flair_css_class: String
+    author_patreon_flair: Boolean
+    body_html: String
+    removal_reason: String
+    collapsed_reason: String
+    distinguished: String
+    associated_award: String
+    stickied: Boolean
+    author_premium: Boolean
+    can_gild: Boolean
+    unrepliable_reason: String
+    author_flair_text_color: String
+    score_hidden: Boolean
+    subreddit_type: String
+    locked: Boolean
+    report_reasons: String
+    author_flair_text: String
     most_recent_version_updated_at: String
-    most_recent_upvote_ratio : Float
+    upvote_ratio : Float
 }
 
 type CommentDetail {
@@ -226,23 +216,20 @@ type Account {
     name: String
     version_count: Int
     reddit_account_id: String
-    most_recent_sun_version_id: Int
-    most_recent_sun_detail_id: Int
-    most_recent_sun_created_at: String
-    most_recent_comment_karma: Int
-    most_recent_link_karma: Int
-    most_recent_total_karma: Int
-    most_recent_awardee_karma: Int
-    most_recent_awarder_karma: Int
-    most_recent_listing_use_sort: Boolean
-    most_recent_is_employee: Boolean
-    most_recent_snoovatar_size: String
-    most_recent_verified: Boolean
-    most_recent_is_gold: Boolean
-    most_recent_icon_img: String
-    most_recent_hide_from_robots: Boolean
-    most_recent_deleted: Boolean
-    most_recent_is_suspended: Boolean
+    comment_karma: Int
+    link_karma: Int
+    total_karma: Int
+    awardee_karma: Int
+    awarder_karma: Int
+    listing_use_sort: Boolean
+    is_employee: Boolean
+    snoovatar_size: String
+    verified: Boolean
+    is_gold: Boolean
+    icon_img: String
+    hide_from_robots: Boolean
+    deleted: Boolean
+    is_suspended: Boolean
     most_recent_version_updated_at: String
 }
 
@@ -269,6 +256,15 @@ type AccountDetail {
     pref_show_snoovatar : Boolean
     snoovatar_img : String
     accept_followers : Boolean
+}
+
+type SunObjectsResult {
+    success: Boolean!
+    errors: [String]
+    sun_unique_id: Int
+    most_recent_version_id: Int
+    most_recent_detail_id: Int
+    created_new_version: Boolean
 }
 
 
@@ -381,17 +377,24 @@ type Query {
           postedAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
-          orderBy: OrderByInput): PostsResult!
+          orderBy: OrderByInput,
+          sun_subreddit_id: Int,
+          sun_account_id: Int,
+          limit: Int): PostsResult!
 
     comment(byId: ID, reddit_id: String): CommentResult!
     commentdetail(byId: Int!): CommentDetailResult!
     commentdetails(sun_unique_id: Int, sun_comment_id: Int): CommentDetailsResult!
-    comments(commentedBefore: String,
+    comments(reddit_ids: [String],
+          commentedBefore: String,
           commentedAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
           orderBy: OrderByInput,
-          sun_post_id: Int): CommentsResult!
+          sun_post_id: Int,
+          sun_subreddit_id: Int,
+            sun_account_id: Int,
+          limit: Int): CommentsResult!
 
     account(byId: ID, reddit_id: String, name: String): AccountResult!
     accountdetail(byId: Int!): AccountDetailResult!
@@ -400,7 +403,8 @@ type Query {
           createdAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
-          orderBy: OrderByInput): AccountsResult!
+          orderBy: OrderByInput,
+          limit: Int): AccountsResult!
 
     subreddit(byId: ID, reddit_id: String, name: String): SubredditResult!
     subredditdetail(byId: Int!): SubredditDetailResult!
@@ -411,11 +415,13 @@ type Query {
           createdAfter: String,
           updatedBefore: String, 
           updatedAfter: String,
-          orderBy: OrderByInput): SubredditsResult!
+          orderBy: OrderByInput,
+          limit: Int): SubredditsResult!
 }
 
 
 type Mutation {
+    createSunobjects(from_json: String!): [SunObjectsResult]!
     createComment(from_json: String!): CommentResult!
     createPost(from_json: String!): PostResult!
     createAccount(from_json: String!): AccountResult!

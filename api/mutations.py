@@ -133,14 +133,18 @@ def create_object(kind, from_dict):
                 continue
             add_to_db(from_dict, model)
 
-        
+
     try:
         db.session.commit()
 
         final_result = models['main'].query.get(from_dict[f'sun_{kind}_id'])
         payload = {'success': True,
-                    kind : final_result.to_dict(),
+                    'kind' : kind,
+                    'sun_unique_id' : final_result.sun_unique_id,
+                    'most_recent_version_id' : final_result.versions[-1].sun_version_id,
+                    'most_recent_detail_id' : final_result.most_recent_detail.sun_detail_id,
                     'created_new_version': should_write}
+
     except Exception as e:
         db.session.rollback()
         raise e
@@ -150,8 +154,18 @@ def create_object(kind, from_dict):
     return payload
 
 @convert_kwargs_to_snake_case
+def resolve_create_sun_objects(obj, info, from_json):
+    from_dict = json.loads(from_json)
+    results = []
+    for data in from_dict:
+        results += [create_object(data['kind'], data)]
+
+    return results
+
+@convert_kwargs_to_snake_case
 def resolve_create_comment(obj, info, from_json):
     from_dict = json.loads(from_json)
+
     return create_object("comment", from_dict)
 
 @convert_kwargs_to_snake_case

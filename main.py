@@ -41,6 +41,7 @@ mutation.set_field("createComment", resolve_create_comment)
 mutation.set_field("createPost", resolve_create_post)
 mutation.set_field("createAccount", resolve_create_account)
 mutation.set_field("createSubreddit", resolve_create_subreddit)
+mutation.set_field("createSunobjects", resolve_create_sun_objects)
 
 type_defs = load_schema_from_path("schema.graphql")
 schema = make_executable_schema(

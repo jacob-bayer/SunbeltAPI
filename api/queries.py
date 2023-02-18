@@ -25,14 +25,20 @@ def resolve_posts(obj, info, **kwargs):
     updated_after = kwargs.get('updated_after')
     order_by = kwargs.get('order_by')
     reddit_ids = kwargs.get('reddit_ids')
+    sun_subreddit_id = kwargs.get('sun_subreddit_id')
+    sun_account_id = kwargs.get('sun_account_id')
+    limit = kwargs.get('limit')
 
     posts = Post.query
 
-    if order_by: # Not sure this is necessary anymore
-        posts = posts.join(PostVersion)
-
     if reddit_ids:
         posts = posts.filter(Post.reddit_post_id.in_(reddit_ids))
+
+    if sun_subreddit_id:
+        posts = posts.filter(Post.sun_subreddit_id == sun_subreddit_id)
+
+    if sun_account_id:
+        posts = posts.filter(Post.sun_account_id == sun_account_id)
 
     if updated_before:
         updated_before = convert_date(updated_before)
@@ -51,6 +57,7 @@ def resolve_posts(obj, info, **kwargs):
         posts = posts.filter(Post.sun_created_at > posted_after)
     
     if order_by: # Not sure this is necessary anymore
+        posts = posts.join(PostVersion)
         posts = posts.join(PostDetail)
         order_by_to_cols = {
             'sun_unique_id' : Post.sun_post_id,
@@ -64,6 +71,10 @@ def resolve_posts(obj, info, **kwargs):
                 posts = posts.order_by(col_to_order_by.asc())
             elif sort_by == 'desc':
                 posts = posts.order_by(col_to_order_by.desc())
+
+    if limit:
+        posts = posts.limit(limit)
+
 
     try:
         posts = [post.to_dict() for post in posts]
@@ -180,6 +191,9 @@ def resolve_comments(obj, info, **kwargs):
     reddit_ids = kwargs.get('reddit_ids')
     order_by = kwargs.get('order_by')
     sun_post_id = kwargs.get('sun_post_id')
+    reddit_ids = kwargs.get('reddit_ids')
+    sun_subreddit_id = kwargs.get('sun_subreddit_id')
+    limit = kwargs.get('limit')
 
     comments = Comment.query
 
@@ -187,7 +201,10 @@ def resolve_comments(obj, info, **kwargs):
         comments = comments.join(CommentVersion)
 
     if reddit_ids:
-        posts = posts.filter(Post.reddit_post_id.in_(reddit_ids))
+        comments = comments.filter(Comment.reddit_comment_id.in_(reddit_ids))
+
+    if sun_subreddit_id:
+        comments = comments.filter(Comment.sun_subreddit_id == sun_subreddit_id)
 
     if updated_before:
         updated_before = convert_date(updated_before)
@@ -222,6 +239,10 @@ def resolve_comments(obj, info, **kwargs):
                 comments = comments.order_by(col_to_order_by.asc())
             elif sort_by == 'desc':
                 comments = comments.order_by(col_to_order_by.desc())
+
+    if limit:
+        comments = comments.limit(limit)
+
 
     try:
         comments = [comment.to_dict() for comment in comments]

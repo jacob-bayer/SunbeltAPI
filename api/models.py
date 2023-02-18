@@ -60,6 +60,8 @@ class Subreddit(db.Model):
             'reddit_unique_id' : self.reddit_unique_id,
             'sun_unique_id' : self.sun_unique_id,
             'reddit_subreddit_id': self.reddit_subreddit_id,
+            'most_recent_sun_version_id': self.versions[-1].sun_version_id,
+            'most_recent_sun_detail_id': self.most_recent_detail.sun_detail_id,
             'url': self.url,
             'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'display_name_prefixed': self.display_name_prefixed,
@@ -72,7 +74,7 @@ class Subreddit(db.Model):
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
             'versons': [version.detail.to_dict() for version in self.versions],
         }
-        most_recent_details_dict = {'most_recent_' + key: value for key, value in self.most_recent_detail.to_dict().items()}
+        most_recent_details_dict = {key: value for key, value in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
     
 
@@ -313,7 +315,7 @@ class Account(db.Model):
             'versions': [v.detail.to_dict() for v in self.versions],
 
         }
-        most_recent_detail_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        most_recent_detail_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_detail_dict}
 
 class AccountVersion(db.Model):
@@ -484,6 +486,8 @@ class Post(db.Model):
             "sun_account_id" : self.sun_account_id,
             "sun_subreddit_id" : self.sun_subreddit_id,
             "sun_created_at" : self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'most_recent_sun_version_id': self.versions[-1].sun_version_id,
+            'most_recent_sun_detail_id': self.most_recent_detail.sun_detail_id,
             "reddit_post_id" : self.reddit_post_id,
             "reddit_account_id" : self.reddit_account_id,
             "reddit_subreddit_id" : self.reddit_subreddit_id,
@@ -497,12 +501,10 @@ class Post(db.Model):
             "removed" : any([version.removed for version in self.versions]),
             "edited" : any([version.edited for version in self.versions]),
             "deleted" : any([version.deleted for version in self.versions]),
-            "selftext" : self.most_recent_detail.selftext,
-            "score" : self.most_recent_detail.score,
             "version_count" : len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
         }
-        most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        most_recent_details_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
     
 
@@ -895,6 +897,8 @@ class Comment(db.Model):
             'sun_post_id': self.sun_post_id,
             'sun_subreddit_id': self.sun_subreddit_id,
             'sun_account_id': self.sun_account_id,
+            'most_recent_sun_version_id': self.versions[-1].sun_version_id,
+            'most_recent_sun_detail_id': self.most_recent_detail.sun_detail_id,
             'reddit_comment_id': self.reddit_comment_id,
             'reddit_parent_id': self.reddit_parent_id,
             'reddit_post_id': self.reddit_post_id,
@@ -913,17 +917,12 @@ class Comment(db.Model):
             "edited" : any([version.edited for version in self.versions]),
             "deleted" : any([version.deleted for version in self.versions]),
             "versions" : [version.detail.to_dict() for version in self.versions],
-            "body" : self.most_recent_detail.body,
-            "score" : self.most_recent_detail.score,
-            "ups" : self.most_recent_detail.ups,
-            "downs" : self.most_recent_detail.downs,
-            "gilded" : self.most_recent_detail.gilded,
             "version_count" : len(self.versions),
             'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
             "post" : self.post.to_dict() if self.post else None,
             "subreddit" : self.subreddit.to_dict() if self.subreddit else None,
         }
-        most_recent_details_dict = {'most_recent_' + k: v for k, v in self.most_recent_detail.to_dict().items()}
+        most_recent_details_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
 
 class CommentVersion(db.Model):
