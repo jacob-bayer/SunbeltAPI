@@ -102,6 +102,10 @@ class SubredditVersion(db.Model):
     def sun_version_id(self):
         return self.sun_subreddit_version_id
 
+    @hybrid_property
+    def sun_detail_id(self):
+        return self.sun_subreddit_detail_id
+
     # TODO:
     # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
     # So that the detail has the version id
@@ -341,6 +345,10 @@ class AccountVersion(db.Model):
     def sun_version_id(self):
         return self.sun_account_version_id
 
+    @hybrid_property
+    def sun_detail_id(self):
+        return self.sun_account_detail_id
+
     # TODO:
     # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
     # So that the detail has the version id
@@ -426,7 +434,7 @@ class Post(db.Model):
     sun_post_id = Column(BigInteger, primary_key=True, index=True)
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
-    reddit_post_id = Column(Text, nullable=False)
+    reddit_post_id = Column(Text, nullable=False, unique=True)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
@@ -458,6 +466,10 @@ class Post(db.Model):
     @hybrid_property
     def sun_unique_id(self):
         return self.sun_post_id
+
+    @hybrid_property
+    def most_recent_version(self):
+        return self.versions[-1]
 
     @property
     def most_recent_detail(self):
@@ -497,7 +509,7 @@ class Post(db.Model):
             "permalink" : self.permalink,
             "author" : self.author.to_dict() if self.author else None,
             "versions" : [v.detail.to_dict() for v in self.versions],
-            "subreddit" : self.subreddit.to_dict(),
+            "subreddit" : self.subreddit.to_dict() if self.subreddit else None,
             "removed" : any([version.removed for version in self.versions]),
             "edited" : any([version.edited for version in self.versions]),
             "deleted" : any([version.deleted for version in self.versions]),
@@ -546,6 +558,11 @@ class PostVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_post_version_id
+
+    @hybrid_property
+    def sun_detail_id(self):
+        return self.sun_post_detail_id
+
 
     # TODO:
     # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
@@ -948,6 +965,10 @@ class CommentVersion(db.Model):
     @hybrid_property
     def sun_version_id(self):
         return self.sun_comment_version_id
+
+    @hybrid_property
+    def sun_detail_id(self):
+        return self.sun_comment_detail_id
 
 
     # TODO:

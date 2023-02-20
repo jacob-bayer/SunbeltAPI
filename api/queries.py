@@ -75,7 +75,6 @@ def resolve_posts(obj, info, **kwargs):
     if limit:
         posts = posts.limit(limit)
 
-
     try:
         posts = [post.to_dict() for post in posts]
         payload = {

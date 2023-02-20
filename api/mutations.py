@@ -6,18 +6,23 @@ from main import db
 from datetime import datetime, timedelta
 import pytz
 
-def create_object(kind, from_dict):
+def create_object(kind, list_of_dict_objs):
+
     # Returns bool indicating whether a new version of the object should be created
+    
+    model = lookup_dict[kind]["main"]
+    detail = lookup_dict[kind]["detail"]
+    version = lookup_dict[kind]["version"]
 
     def set_sun_ids(kind, obj_dict_to_update):
+
+        breakpoint()
+
         should_write = True
 
-
         reddit_id = obj_dict_to_update[f'reddit_{kind}_id']
-        model = lookup_dict[kind]["main"]
-        detail = lookup_dict[kind]["detail"]
-        version = lookup_dict[kind]["version"]
-        # TODO: confirm that this works
+
+        # TODO: Edit this so that if a batch request is made it queries for all the ids at once
         results = model.query.filter_by(reddit_unique_id=reddit_id).all()
         
         # case 1: too many results
