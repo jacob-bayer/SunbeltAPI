@@ -5,8 +5,9 @@ import json
 from main import db
 from datetime import datetime, timedelta
 import pytz
+from sqlalchemy.exc import IntegrityError
 
-def create_object(kind, list_of_dict_objs):
+def create_object(kind, dict_of_dicts):
 
     # Returns bool indicating whether a new version of the object should be created
     
@@ -14,9 +15,9 @@ def create_object(kind, list_of_dict_objs):
     model = models["main"]
     version = models["version"]
     
-    def set_obj_ids(list_of_dict_objs):
+    def set_obj_ids(dict_of_dicts):
 
-        reddit_ids = list(list_of_dict_objs.keys())
+        reddit_ids = list(dict_of_dicts.keys())
 
         last_ids = db.session.query(db.func.max(version.sun_unique_id).label('sun_unique_id'),
                                     db.func.max(version.sun_detail_id).label('sun_detail_id'),
@@ -44,7 +45,7 @@ def create_object(kind, list_of_dict_objs):
             mr_dict[row.reddit_unique_id] = {col: row[col] for col in row.keys()}
 
         final_result_ids = []
-        for reddit_unique_id, obj_to_write in list_of_dict_objs.items():
+        for reddit_unique_id, obj_to_write in dict_of_dicts.items():
 
             mrv = mr_dict.get(reddit_unique_id)
             if mrv:
@@ -63,7 +64,7 @@ def create_object(kind, list_of_dict_objs):
             final_result_ids += [ids_dict]
         return final_result_ids
 
-    obj_ids = set_obj_ids(list_of_dict_objs)
+    obj_ids = set_obj_ids(dict_of_dicts)
 
     # Return the ids of the objects that will be written
     # This is returned from the mutation
@@ -85,7 +86,7 @@ def create_object(kind, list_of_dict_objs):
                     for model_name, model in models.items()}
 
     sqla_objs_to_write = []
-    for item in list_of_dict_objs.values():
+    for item in dict_of_dicts.values():
         v1 = item[f'sun_{kind}_version_id'] == 1
         if v1:
             sqla_objs_to_write += [generate_sqla_obj(item, models['main'], model_columns['main'])]
@@ -99,11 +100,17 @@ def create_object(kind, list_of_dict_objs):
         payload = {'success': True,
                     'objs_created' : return_confirm_result}
 
+    except IntegrityError as e:
+        db.session.rollback()
+        payload = {'success': False,
+                   'error': 'IntegrityError. Your dev database is out of sync.'}
+        raise e
+
     except Exception as e:
         db.session.rollback()
-        raise e
         payload = {'success': False,
                    'error': e}
+        raise e
 
     return payload
 
