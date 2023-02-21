@@ -1,10 +1,6 @@
-from .model_lookup import lookup_dict
-from .models import *
-from ariadne import convert_kwargs_to_snake_case
+from model_lookup import lookup_dict
+from models import *
 import json
-from main import db
-from datetime import datetime, timedelta
-import pytz
 from sqlalchemy.exc import IntegrityError
 
 def create_objects(kind, dict_of_dicts):
@@ -123,8 +119,8 @@ def create_objects(kind, dict_of_dicts):
 
     return payload
 
-@convert_kwargs_to_snake_case
-def resolve_create_sun_objects(obj, info, from_json):
+
+def batch_create_from_json(from_json):
     from_dict = json.loads(from_json)
 
     objs_created = []
@@ -138,23 +134,3 @@ def resolve_create_sun_objects(obj, info, from_json):
             return {'success': False, 'error': result['error']}
 
     return {'success': True, 'objs_created': objs_created}
-
-@convert_kwargs_to_snake_case
-def resolve_create_comment(obj, info, from_json):
-    from_dict = json.loads(from_json)
-    return create_object("comment", from_dict)
-
-@convert_kwargs_to_snake_case
-def resolve_create_post(obj, info, from_json):
-    from_dict = json.loads(from_json)
-    return create_object("post", from_dict)
-
-@convert_kwargs_to_snake_case
-def resolve_create_account(obj, info, from_json):
-    from_dict = json.loads(from_json)
-    return create_object("account", from_dict)
-
-@convert_kwargs_to_snake_case
-def resolve_create_subreddit(obj, info, from_json):
-    from_dict = json.loads(from_json)
-    return create_object("subreddit", from_dict)

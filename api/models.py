@@ -2,7 +2,8 @@
 
 from . import db
 from sqlalchemy.orm import relationship, reconstructor
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Index, Integer, Text, text, Numeric
+from sqlalchemy import ( BigInteger, Boolean, Column, DateTime, Float, ForeignKey, 
+                        Identity, Index, Integer, Text, text, Numeric, Computed )
 
 from sqlalchemy import select
 

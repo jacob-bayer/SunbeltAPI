@@ -4,7 +4,17 @@
 # where these routes need to import the resolvers which depend on 
 # the app being initialized already.
 from api import app, db
-#from api.models import *
+
+from redis import Redis
+from rq import Queue
+from rq.job import Job
+from api.redis_worker import conn
+
+
+from flask_jwt_extended import (jwt_required,
+                                get_jwt_identity)
+
+from api.batch_add import batch_create_from_json
 
 from ariadne import load_schema_from_path, make_executable_schema, \
     graphql_sync, snake_case_fallback_resolvers, ObjectType
@@ -36,16 +46,16 @@ query.set_field("subreddits", resolve_subreddits)
 query.set_field("subredditdetail", resolve_subreddit_detail)
 query.set_field("subredditdetails", resolve_subreddit_details)
 
-mutation = ObjectType("Mutation")
-mutation.set_field("createComment", resolve_create_comment)
-mutation.set_field("createPost", resolve_create_post)
-mutation.set_field("createAccount", resolve_create_account)
-mutation.set_field("createSubreddit", resolve_create_subreddit)
-mutation.set_field("createSunobjects", resolve_create_sun_objects)
+# mutation = ObjectType("Mutation")
+# mutation.set_field("createComment", resolve_create_comment)
+# mutation.set_field("createPost", resolve_create_post)
+# mutation.set_field("createAccount", resolve_create_account)
+# mutation.set_field("createSubreddit", resolve_create_subreddit)
+# mutation.set_field("createSunobjects", resolve_create_sun_objects)
 
 type_defs = load_schema_from_path("schema.graphql")
 schema = make_executable_schema(
-    type_defs, query, mutation, snake_case_fallback_resolvers
+    type_defs, query, snake_case_fallback_resolvers #mutation, 
 )
 
 
@@ -68,6 +78,8 @@ def graphql_server():
 
     status_code = 200 if success else 400
     return jsonify(result), status_code
+
+
 
 
 # The purpose of this is to try to run the app and get package dependency errors
@@ -117,3 +129,20 @@ if __name__ == '__main__':
 #     # Access the identity of the current user with get_jwt_identity
 #     current_user = get_jwt_identity()
 #     return jsonify(logged_in_as=current_user), 200
+
+
+##########
+
+redis_q = Queue(connection=conn)
+
+@app.route("/add_batch_data", methods=["POST"])
+@jwt_required()
+def queue_mutation():
+    current_user = get_jwt_identity()
+    if current_user != 'admin':
+        return jsonify({"msg": "Not authorized"}), 401
+    try:
+        redis_q.enqueue(batch_create_from_json, request.json)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": e}), 400
