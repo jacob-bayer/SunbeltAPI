@@ -7,8 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 
-#from celery import Celery, Task
-
 from flask_jwt_extended import JWTManager, create_access_token
 
 
@@ -22,28 +20,9 @@ app = Flask(__name__)
 if app.debug:
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL'] #'sqlite:///app.db'
 else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL']
+    #app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
 
-
-# def celery_init_app(app: Flask) -> Celery:
-#     class FlaskTask(Task):
-#         def __call__(self, *args: object, **kwargs: object) -> object:
-#             with app.app_context():
-#                 return self.run(*args, **kwargs)
-
-#     celery_app = Celery(app.name, task_cls=FlaskTask)
-#     celery_app.config_from_object(app.config["CELERY"])
-#     celery_app.set_default()
-#     app.extensions["celery"] = celery_app
-#     return celery_app
-
-# app.config.from_mapping(
-#     CELERY=dict(
-#         broker_url="redis://localhost",
-#         result_backend="redis://localhost",
-#         task_ignore_result=True,
-#     ),
-# )
 
 app.config["JWT_SECRET_KEY"] = os.environ['JWT_SECRET_KEY']
 jwt = JWTManager(app)
@@ -68,13 +47,11 @@ def auth():
     return jsonify(access_token=access_token), 200
 
 
-
 @app.errorhandler(500)
 def server_error(e):
     # Log the error and stacktrace.
     logging.exception('An error occurred during a request.')
     return 'An internal error occurred.', 500
 
-if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+
     

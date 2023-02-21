@@ -1,7 +1,8 @@
-from model_lookup import lookup_dict
-from models import *
+from .model_lookup import lookup_dict
+from .models import *
 import json
 from sqlalchemy.exc import IntegrityError
+
 
 def create_objects(kind, dict_of_dicts):
 
