@@ -258,13 +258,17 @@ type AccountDetail {
     accept_followers : Boolean
 }
 
-type SunObjectsResult {
-    success: Boolean!
-    errors: [String]
+
+type WriteResult {
     sun_unique_id: Int
     most_recent_version_id: Int
     most_recent_detail_id: Int
-    created_new_version: Boolean
+}
+
+type SunObjectsResult {
+    success: Boolean!
+    errors: [String]
+    objs_created : [WriteResult]
 }
 
 
@@ -421,7 +425,7 @@ type Query {
 
 
 type Mutation {
-    createSunobjects(from_json: String!): [SunObjectsResult]!
+    createSunobjects(from_json: String!): SunObjectsResult!
     createComment(from_json: String!): CommentResult!
     createPost(from_json: String!): PostResult!
     createAccount(from_json: String!): AccountResult!

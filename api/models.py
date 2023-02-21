@@ -10,6 +10,10 @@ from sqlalchemy import select
 # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
 from sqlalchemy.ext.hybrid import hybrid_property
 
+def col_equals(column_name, string):
+    def default_function(context):
+        return context.current_parameters.get(column_name) == string
+    return default_function
 
 
 class Subreddit(db.Model):
@@ -17,7 +21,7 @@ class Subreddit(db.Model):
     __table_args__ = {'schema': 'subreddits'}
 
     sun_subreddit_id = Column(BigInteger, primary_key=True, index=True)
-    reddit_subreddit_id = Column(Text, nullable=False)
+    reddit_subreddit_id = Column(Text, nullable=False, unique=True)
     url = Column(Text, nullable=False)
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     display_name_prefixed = Column(Text)
@@ -600,8 +604,8 @@ class PostDetail(db.Model):
     upvote_ratio = Column(Float(53))
     num_comments = Column(BigInteger)
     num_reports = Column(Text)
-    removed = Column(Boolean, nullable=False)
-    deleted = Column(Boolean, nullable=False)
+    removed = Column(Boolean, nullable=False, default=col_equals('selftext', '[removed]'))
+    deleted = Column(Boolean, nullable=False, default=col_equals('selftext', '[deleted]'))
     author_has_subscribed = Column(Boolean)
     author_is_mod = Column(Boolean)
     comment_limit = Column(BigInteger)
@@ -854,7 +858,7 @@ class Comment(db.Model):
     sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=True) 
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
-    reddit_comment_id = Column(Text, nullable=False)
+    reddit_comment_id = Column(Text, nullable=False, unique=True)
     reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
@@ -1007,8 +1011,8 @@ class CommentDetail(db.Model):
     score = Column(BigInteger)
     body = Column(Text)
     edited = Column(BigInteger)
-    removed = Column(Boolean, nullable=False)
-    deleted = Column(Boolean, nullable=False)
+    removed = Column(Boolean, nullable=False, default=col_equals('body', '[removed]'))
+    deleted = Column(Boolean, nullable=False, default=col_equals('body', '[deleted]'))
     author_cakeday = Column(Boolean)
     author_has_subscribed = Column(Boolean)
     author_is_mod = Column(Boolean)

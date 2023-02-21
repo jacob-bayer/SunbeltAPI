@@ -10,145 +10,94 @@ def create_object(kind, list_of_dict_objs):
 
     # Returns bool indicating whether a new version of the object should be created
     
-    model = lookup_dict[kind]["main"]
-    detail = lookup_dict[kind]["detail"]
-    version = lookup_dict[kind]["version"]
-
-    def set_sun_ids(kind, obj_dict_to_update):
-
-        breakpoint()
-
-        should_write = True
-
-        reddit_id = obj_dict_to_update[f'reddit_{kind}_id']
-
-        # TODO: Edit this so that if a batch request is made it queries for all the ids at once
-        results = model.query.filter_by(reddit_unique_id=reddit_id).all()
-        
-        # case 1: too many results
-        if len(results) > 1:
-            sun_ids = ', '.join(r.sun_unique_id for r in results)
-            raise ValueError(f"Multiple Sun ids {sun_ids} for same reddit id: {reddit_id}")
-        
-        # detail_id
-        last_detail = detail.query.order_by(detail.sun_detail_id.desc()).first()
-        if last_detail:
-            obj_dict_to_update[f'sun_{kind}_detail_id'] = last_detail.sun_detail_id + 1
-        else:
-            obj_dict_to_update[f'sun_{kind}_detail_id'] = 1
-
-        # case 2: no results
-        if len(results) == 0:
-
-            # main_id
-            last_main = model.query.order_by(model.sun_unique_id.desc()).first()
-            if last_main:
-                obj_dict_to_update[f'sun_{kind}_id'] = last_main.sun_unique_id + 1
-            else:
-                obj_dict_to_update[f'sun_{kind}_id'] = 1
-
-            # version_id
-            obj_dict_to_update[f'sun_{kind}_version_id'] = 1
-
-        # case 3: one result
-        elif len(results) == 1:
-            existing_obj = results[0]
-
-            # main_id
-            obj_dict_to_update[f'sun_{kind}_id'] = existing_obj.sun_unique_id
-
-            # version_id
-            last_version = version.query.filter_by(sun_unique_id=existing_obj.sun_unique_id)\
-                                .order_by(version.sun_version_id.desc()).first()
-
-            last_version_id = last_version.sun_version_id
-
-            obj_dict_to_update[f'sun_{kind}_version_id'] = last_version_id + 1
-
-            mins_ago = datetime.utcnow() - timedelta(minutes = 15)
-            should_write = last_version.sun_created_at < mins_ago
-
-
-        return should_write
-
-
-    # The Sun ids for higher level objects must be added to the dictionary first
-    if kind in ['post','comment']:
-        if kind == 'post':
-            from_dict['removed'] = from_dict['selftext'] == '[removed]'
-            from_dict['deleted'] = from_dict['selftext'] == '[deleted]'
-            
-            subreddit = from_dict.get('subreddit')
-            if subreddit:
-                create_object('subreddit', subreddit)
-                from_dict['sun_subreddit_id'] = subreddit['sun_subreddit_id']
-
-            elif from_dict.get('reddit_subreddit_id'):
-                subreddit = Subreddit.query.filter_by(reddit_subreddit_id = from_dict['reddit_subreddit_id']).first()
-                if subreddit:
-                    from_dict['sun_subreddit_id'] = subreddit.sun_subreddit_id
-
-        author = from_dict.get('author')
-        if author:
-            if not isinstance(author, dict):
-                author = {'reddit_account_id': from_dict['reddit_account_id'],
-                          'name': from_dict['author']}
-            create_object('account', author)
-            from_dict['sun_account_id'] = author['sun_account_id']
-        elif from_dict.get('reddit_account_id'):
-            account = Account.query.filter_by(reddit_account_id = from_dict['reddit_account_id']).first()
-            if account:
-                from_dict['sun_account_id'] = account.sun_account_id
-
-
-        if kind == 'comment':
-            from_dict['removed'] = from_dict['body'] == '[removed]'
-            from_dict['deleted'] = from_dict['body'] == '[deleted]'
-
-            # It shouldn't have the post in most cases
-            post = from_dict.get('post')
-            if post:
-                create_object('post', post)
-                from_dict['sun_post_id'] = post['sun_post_id']
-                from_dict['sun_subreddit_id'] = post['sun_subreddit_id']
-            elif from_dict.get('reddit_post_id'):
-                post = Post.query.filter_by(reddit_post_id = from_dict['reddit_post_id']).first()
-                if post:
-                    from_dict['sun_post_id'] = post.sun_post_id
-                    from_dict['sun_subreddit_id'] = post.sun_subreddit_id
-    
-    
     models = lookup_dict[kind]
+    model = models["main"]
+    version = models["version"]
+    
+    def set_obj_ids(list_of_dict_objs):
 
-    should_write = set_sun_ids(kind, from_dict)
+        reddit_ids = list(list_of_dict_objs.keys())
 
-    if should_write:
+        last_ids = db.session.query(db.func.max(version.sun_unique_id).label('sun_unique_id'),
+                                    db.func.max(version.sun_detail_id).label('sun_detail_id'),
+                                    ).one()
+
+        last_ids = {col : last_ids[col] or 1 for col in last_ids.keys()}
 
 
-        v1 = from_dict[f'sun_{kind}_version_id'] == 1
+        subquery = db.session.query(
+                            version.sun_unique_id.label('sun_unique_id'), 
+                            db.func.max(version.sun_version_id).label('max_version_id'))\
+                            .group_by(version.sun_unique_id).subquery()
 
-        def add_to_db(from_dict, model):
-            columns_to_keep = model.__table__.c.keys()
-            values = {k: v for k, v in from_dict.items() if k in columns_to_keep}
-            db_obj = model(**values)
-            db.session.add(db_obj)
+        mr_query = model.query.join(version)\
+                        .join(subquery, db.and_(version.sun_unique_id == subquery.c.sun_unique_id, 
+                                                version.sun_version_id == subquery.c.max_version_id))\
+                        .filter(model.reddit_unique_id.in_(reddit_ids))\
+                        .with_entities(model.reddit_unique_id.label('reddit_unique_id'), 
+                                    model.sun_unique_id.label('sun_unique_id'), 
+                                    version.sun_version_id.label('most_recent_version_id'),
+                                    version.sun_created_at.label('most_recent_version_updated_at'))
 
-        for table, model in models.items():
-            if not v1 and table == 'main':
-                continue
-            add_to_db(from_dict, model)
+        mr_dict = {}
+        for row in mr_query:
+            mr_dict[row.reddit_unique_id] = {col: row[col] for col in row.keys()}
 
+        final_result_ids = []
+        for reddit_unique_id, obj_to_write in list_of_dict_objs.items():
+
+            mrv = mr_dict.get(reddit_unique_id)
+            if mrv:
+                ids_dict = {f'sun_{kind}_id' : mrv['sun_unique_id'],
+                            f'sun_{kind}_version_id' : mrv['most_recent_version_id'] + 1,
+                            f'sun_{kind}_detail_id' : last_ids['sun_detail_id'] + 1}
+                last_ids['sun_detail_id'] += 1
+  
+            else:
+                ids_dict = {f'sun_{kind}_id' : last_ids['sun_unique_id'] + 1,
+                            f'sun_{kind}_version_id' : 1,
+                            f'sun_{kind}_detail_id' : last_ids['sun_detail_id'] + 1}
+                last_ids = {col : last_ids[col] + 1 for col in last_ids.keys()}
+
+            obj_to_write.update(ids_dict)
+            final_result_ids += [ids_dict]
+        return final_result_ids
+
+    obj_ids = set_obj_ids(list_of_dict_objs)
+
+    # Return the ids of the objects that will be written
+    # This is returned from the mutation
+    return_confirm_result = []
+    for id_set in obj_ids:
+        return_confirm_result.append(
+            {'kind' : kind,
+            'sun_unique_id' : id_set[f'sun_{kind}_id'],
+            'most_recent_version_id' : id_set[f'sun_{kind}_version_id'],
+            'most_recent_detail_id' : id_set[f'sun_{kind}_detail_id']}
+        )
+
+    def generate_sqla_obj(data, model, columns):
+        data = {k: v for k, v in data.items() if k in columns}
+        return model(**data)
+
+    # Detail and version should be added if not v1, else add all including main
+    model_columns = {model_name: model.__table__.c.keys() 
+                    for model_name, model in models.items()}
+
+    sqla_objs_to_write = []
+    for item in list_of_dict_objs.values():
+        v1 = item[f'sun_{kind}_version_id'] == 1
+        if v1:
+            sqla_objs_to_write += [generate_sqla_obj(item, models['main'], model_columns['main'])]
+        sqla_objs_to_write += [generate_sqla_obj(item, models['version'], model_columns['version'])]
+        sqla_objs_to_write += [generate_sqla_obj(item, models['detail'], model_columns['detail'])]
+
+        db.session.add_all(sqla_objs_to_write)
 
     try:
         db.session.commit()
-
-        final_result = models['main'].query.get(from_dict[f'sun_{kind}_id'])
         payload = {'success': True,
-                    'kind' : kind,
-                    'sun_unique_id' : final_result.sun_unique_id,
-                    'most_recent_version_id' : final_result.versions[-1].sun_version_id,
-                    'most_recent_detail_id' : final_result.most_recent_detail.sun_detail_id,
-                    'created_new_version': should_write}
+                    'objs_created' : return_confirm_result}
 
     except Exception as e:
         db.session.rollback()
@@ -161,16 +110,22 @@ def create_object(kind, list_of_dict_objs):
 @convert_kwargs_to_snake_case
 def resolve_create_sun_objects(obj, info, from_json):
     from_dict = json.loads(from_json)
-    results = []
-    for data in from_dict:
-        results += [create_object(data['kind'], data)]
 
-    return results
+    objs_created = []
+    kinds = ['post', 'comment', 'account', 'subreddit']
+    for kind in kinds:
+        data = {x[f'reddit_{kind}_id']: x for x in from_dict if x['kind'] == kind}
+        result = create_object(kind, data)
+        if result['success']:
+            objs_created += result['objs_created']
+        elif result['error']:
+            return {'success': False, 'error': result['error']}
+
+    return {'success': True, 'objs_created': objs_created}
 
 @convert_kwargs_to_snake_case
 def resolve_create_comment(obj, info, from_json):
     from_dict = json.loads(from_json)
-
     return create_object("comment", from_dict)
 
 @convert_kwargs_to_snake_case
