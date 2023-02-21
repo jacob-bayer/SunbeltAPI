@@ -3,6 +3,8 @@ from api import app
 import redis
 from rq import Worker, Queue, Connection
 import argparse
+from dotenv import load_dotenv
+load_dotenv()
 
 listen = ['default']
 
