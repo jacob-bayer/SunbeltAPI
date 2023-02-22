@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 import secrets
 import os
 
+def datetime_now_if_true(some_bool):
+    return datetime.now() if some_bool else None
+
 def write_statistics_to_file(checkpoints, length_of_data, kind):
     # Checkpoints is a dictionary of the form {checkpoint_name : datetime}
     
@@ -33,7 +36,8 @@ def write_statistics_to_file(checkpoints, length_of_data, kind):
     filepath = f'../analysis/system_statistics/api_write_stats_{today}.json'
     
     if not os.path.exists(filepath):
-        with open(filepath, 'w'): pass
+        with open(filepath, 'w') as f:
+            f.write('[{}]')
 
     with open(filepath, mode="r+") as file:
         file.seek(0,2)
@@ -46,6 +50,8 @@ def create_objects(kind, dict_of_dicts):
 
     checkpoints = {}
 
+    write_statistics = False
+
     # Returns bool indicating whether a new version of the object should be created
     
     models = lookup_dict[kind]
@@ -56,14 +62,14 @@ def create_objects(kind, dict_of_dicts):
 
         reddit_ids = list(dict_of_dicts.keys())
 
-        checkpoints['started_set_obj_dicts'] = datetime.now()
+        checkpoints['started_set_obj_dicts'] = datetime_now_if_true(write_statistics)
         last_ids = db.session.query(db.func.max(version.sun_unique_id).label('sun_unique_id'),
                                     db.func.max(version.sun_detail_id).label('sun_detail_id'),
                                     ).one()
 
         last_ids = {col : last_ids[col] or 1 for col in last_ids.keys()}
 
-        checkpoints['last_ids_complete'] = datetime.now()
+        checkpoints['last_ids_complete'] = datetime_now_if_true(write_statistics)
         subquery = db.session.query(
                             version.sun_unique_id.label('sun_unique_id'), 
                             db.func.max(version.sun_version_id).label('max_version_id'))\
@@ -78,12 +84,12 @@ def create_objects(kind, dict_of_dicts):
                                     version.sun_version_id.label('most_recent_version_id'),
                                     version.sun_created_at.label('most_recent_version_updated_at'))
 
-        checkpoints['mr_query_complete'] = datetime.now()
+        checkpoints['mr_query_complete'] = datetime_now_if_true(write_statistics)
         mr_dict = {}
         for row in mr_query:
             mr_dict[row.reddit_unique_id] = {col: row[col] for col in row.keys()}
 
-        checkpoints['mr_dict_created'] = datetime.now()
+        checkpoints['mr_dict_created'] = datetime_now_if_true(write_statistics)
         final_result_ids = []
         for reddit_unique_id, obj_to_write in dict_of_dicts.items():
 
@@ -107,7 +113,7 @@ def create_objects(kind, dict_of_dicts):
         return final_result_ids
 
     obj_ids = set_obj_ids(dict_of_dicts)
-    checkpoints['set_ids_completed'] = datetime.now()
+    checkpoints['set_ids_completed'] = datetime_now_if_true(write_statistics)
 
     # Return the ids of the objects that will be written
     # This is returned from the mutation
@@ -120,7 +126,7 @@ def create_objects(kind, dict_of_dicts):
             'most_recent_detail_id' : id_set[f'sun_{kind}_detail_id']}
         )
 
-    checkpoints['return_id_dict_created'] = datetime.now()
+    checkpoints['return_id_dict_created'] = datetime_now_if_true(write_statistics)
 
     def generate_sqla_obj(data, model, columns):
         data = {k: v for k, v in data.items() if k in columns}
@@ -147,10 +153,10 @@ def create_objects(kind, dict_of_dicts):
         #         print(sqla_obj.reddit_unique_id)
         #         raise Exception('Error writing to database')
 
-    checkpoints['db_objs_created'] = datetime.now()
+    checkpoints['db_objs_created'] = datetime_now_if_true(write_statistics)
     db.session.add_all(sqla_objs_to_write)
 
-    checkpoints['db_objs_added_to_session'] = datetime.now()
+    checkpoints['db_objs_added_to_session'] = datetime_now_if_true(write_statistics)
 
     try:
         db.session.commit()
@@ -173,9 +179,10 @@ def create_objects(kind, dict_of_dicts):
                    'error': e}
         raise e
 
-    checkpoints['committed'] = datetime.now()
-
-    write_statistics_to_file(checkpoints, len(dict_of_dicts), kind)
+    checkpoints['committed'] = datetime_now_if_true(write_statistics)
+    if write_statistics:
+        write_statistics_to_file(checkpoints, len(dict_of_dicts), kind)
+        
     return payload
 
 
