@@ -22,7 +22,7 @@ class Subreddit(db.Model):
     __table_args__ = {'schema': 'subreddits'}
 
     sun_subreddit_id = Column(BigInteger, primary_key=True, index=True)
-    reddit_subreddit_id = Column(Text, nullable=False, unique=True)
+    reddit_subreddit_id = Column(Text, nullable=False, index = True)
     url = Column(Text, nullable=False)
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     display_name_prefixed = Column(Text)
@@ -279,7 +279,7 @@ class Account(db.Model):
     sun_account_id = Column(BigInteger, primary_key=True, index=True)
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     name = Column(Text, nullable=False)
-    reddit_account_id = Column(Text)
+    reddit_account_id = Column(Text, nullable=False, index=True)
     created = Column(Float(53))
     created_utc = Column(Float(53))
 
@@ -439,7 +439,7 @@ class Post(db.Model):
     sun_post_id = Column(BigInteger, primary_key=True, index=True)
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
-    reddit_post_id = Column(Text, nullable=False, unique=True)
+    reddit_post_id = Column(Text, nullable=False, index = True)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
@@ -859,7 +859,7 @@ class Comment(db.Model):
     sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=True) 
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
-    reddit_comment_id = Column(Text, nullable=False, unique=True)
+    reddit_comment_id = Column(Text, nullable=False, index=True)
     reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)

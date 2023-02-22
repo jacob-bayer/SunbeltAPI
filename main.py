@@ -85,7 +85,7 @@ from flask_jwt_extended import (jwt_required,
 from api.batch_add import batch_create_from_json
 
 # works with is_async=False
-redis_q = Queue(connection=conn, is_async=True)
+redis_q = Queue('SunbeltInsertQueue', connection=conn, is_async=True)
 
 @app.route("/add_batch_data", methods=["POST"])
 @jwt_required()

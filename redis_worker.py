@@ -6,7 +6,7 @@ import argparse
 from dotenv import load_dotenv
 load_dotenv()
 
-listen = ['default']
+listen = ['SunbeltInsertQueue']
 
 redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 
