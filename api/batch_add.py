@@ -3,8 +3,48 @@ from .models import *
 import json
 from sqlalchemy.exc import IntegrityError
 
+from datetime import datetime, timedelta
+import secrets
+import os
+
+def write_statistics_to_file(checkpoints, length_of_data, kind):
+    # Checkpoints is a dictionary of the form {checkpoint_name : datetime}
+    
+    checkpoint_enumerated_keys_dict = {i : key for i, key in enumerate(checkpoints.keys())}
+    # Convert checkpoints to the form {checkpoint_name : time_since_last_checkpoint}
+    results = {}
+    results['checkpoints'] = {}
+    for i, key in enumerate(checkpoints.keys()):
+        if not i == 0:
+            previous_key = checkpoint_enumerated_keys_dict[i - 1]
+            difference = checkpoints[key] - checkpoints[previous_key]
+        else:
+            difference = timedelta(0)
+
+        start_time = checkpoints[key].strftime('%H:%M:%S')
+        difference = difference.total_seconds()
+        results['checkpoints'][i+1] = {'checkpoint' : key, 'checkpoint_at' : start_time, 'seconds_since_last_checkpoint' : difference}
+
+    results['length_of_data'] = length_of_data
+    results['kind'] = kind
+    results['total_time'] = (checkpoints['committed'] - checkpoints['started_set_obj_dicts']).total_seconds()
+    
+    today = datetime.now().strftime('%Y_%m_%d')
+    filepath = f'../analysis/system_statistics/api_write_stats_{today}.json'
+    
+    if not os.path.exists(filepath):
+        with open(filepath, 'w'): pass
+
+    with open(filepath, mode="r+") as file:
+        file.seek(0,2)
+        position = file.tell() -1
+        file.seek(position)
+        file.write( ",{}]".format(json.dumps({'job': secrets.token_hex(4), 'results' : results})) )
+
 
 def create_objects(kind, dict_of_dicts):
+
+    checkpoints = {}
 
     # Returns bool indicating whether a new version of the object should be created
     
@@ -16,13 +56,14 @@ def create_objects(kind, dict_of_dicts):
 
         reddit_ids = list(dict_of_dicts.keys())
 
+        checkpoints['started_set_obj_dicts'] = datetime.now()
         last_ids = db.session.query(db.func.max(version.sun_unique_id).label('sun_unique_id'),
                                     db.func.max(version.sun_detail_id).label('sun_detail_id'),
                                     ).one()
 
         last_ids = {col : last_ids[col] or 1 for col in last_ids.keys()}
 
-
+        checkpoints['last_ids_complete'] = datetime.now()
         subquery = db.session.query(
                             version.sun_unique_id.label('sun_unique_id'), 
                             db.func.max(version.sun_version_id).label('max_version_id'))\
@@ -37,10 +78,12 @@ def create_objects(kind, dict_of_dicts):
                                     version.sun_version_id.label('most_recent_version_id'),
                                     version.sun_created_at.label('most_recent_version_updated_at'))
 
+        checkpoints['mr_query_complete'] = datetime.now()
         mr_dict = {}
         for row in mr_query:
             mr_dict[row.reddit_unique_id] = {col: row[col] for col in row.keys()}
 
+        checkpoints['mr_dict_created'] = datetime.now()
         final_result_ids = []
         for reddit_unique_id, obj_to_write in dict_of_dicts.items():
 
@@ -59,9 +102,12 @@ def create_objects(kind, dict_of_dicts):
 
             obj_to_write.update(ids_dict)
             final_result_ids += [ids_dict]
+        
+
         return final_result_ids
 
     obj_ids = set_obj_ids(dict_of_dicts)
+    checkpoints['set_ids_completed'] = datetime.now()
 
     # Return the ids of the objects that will be written
     # This is returned from the mutation
@@ -73,6 +119,8 @@ def create_objects(kind, dict_of_dicts):
             'most_recent_version_id' : id_set[f'sun_{kind}_version_id'],
             'most_recent_detail_id' : id_set[f'sun_{kind}_detail_id']}
         )
+
+    checkpoints['return_id_dict_created'] = datetime.now()
 
     def generate_sqla_obj(data, model, columns):
         data = {k: v for k, v in data.items() if k in columns}
@@ -99,7 +147,10 @@ def create_objects(kind, dict_of_dicts):
         #         print(sqla_obj.reddit_unique_id)
         #         raise Exception('Error writing to database')
 
-        db.session.add_all(sqla_objs_to_write)
+    checkpoints['db_objs_created'] = datetime.now()
+    db.session.add_all(sqla_objs_to_write)
+
+    checkpoints['db_objs_added_to_session'] = datetime.now()
 
     try:
         db.session.commit()
@@ -109,7 +160,11 @@ def create_objects(kind, dict_of_dicts):
     except IntegrityError as e:
         db.session.rollback()
         payload = {'success': False,
-                   'error': 'IntegrityError. Your dev database is out of sync.'}
+                   'error': '''IntegrityError. Likely concurrent write attempts 
+                   or dev data that is out of sync with the database.
+                   
+                   Error: {}'''.format(e)
+                     }
         raise e
 
     except Exception as e:
@@ -118,6 +173,9 @@ def create_objects(kind, dict_of_dicts):
                    'error': e}
         raise e
 
+    checkpoints['committed'] = datetime.now()
+
+    write_statistics_to_file(checkpoints, len(dict_of_dicts), kind)
     return payload
 
 
