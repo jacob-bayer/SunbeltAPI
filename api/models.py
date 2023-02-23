@@ -476,9 +476,16 @@ class Post(db.Model):
     def most_recent_version(self):
         return self.versions[-1]
 
-    @property
+    @hybrid_property
     def most_recent_detail(self):
         return self.versions[-1].detail
+
+    @most_recent_detail.expression
+    def most_recent_detail(cls):
+        return select([PostDetail])\
+                .join(PostVersion)\
+                .where(PostVersion.sun_post_id == cls.sun_post_id)\
+                    .order_by(PostVersion.sun_post_version_id.desc()).limit(1).as_scalar()
 
     @hybrid_property
     def most_recent_version_updated_at(self):

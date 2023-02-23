@@ -8,8 +8,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from datetime import datetime, timedelta
-
+from datetime import timedelta
 
 from flask_jwt_extended import (JWTManager, create_access_token, create_refresh_token, 
                                 get_jwt_identity, jwt_required)
@@ -33,7 +32,9 @@ app.config["JWT_SECRET_KEY"] = os.environ['JWT_SECRET_KEY']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=30)
 jwt = JWTManager(app)
 
+app.config['SQLALCHEMY_POOL_SIZE'] = 100
 db = SQLAlchemy(app)
+
 migrate = Migrate(app, db)
 #celery_app = celery_init_app(app)
 

@@ -15,6 +15,7 @@ from flask import request, jsonify
 from api.queries import *
 from api.mutations import *
 
+from datetime import datetime
 from rq import Queue
 from redis_worker import conn
 
@@ -67,7 +68,6 @@ def graphql_playground():
 @app.route("/graphql", methods=["POST"])
 def graphql_server():
     data = request.get_json()
-
     success, result = graphql_sync(
         schema,
         data,
@@ -78,15 +78,38 @@ def graphql_server():
     status_code = 200 if success else 400
     return jsonify(result), status_code
 
+def convert_date(date):
+    try:
+        return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
+    except ValueError:
+        return datetime.strptime(date, '%d-%m-%Y')
+
 
 # REST endpoint that gets all posts based on a list of reddit ids
-@app.route("/posts", methods=["POST"])
+@app.route("/posts_to_update", methods=["POST"])
 def get_posts():
-    data = request.get_json()
-    ids = data.get("ids")
-    if ids is None:
-        return jsonify({"msg": "No ids provided"}), 400
-    posts = Post.query.filter(Post.reddit_post_id.in_(ids)).all()
+    breakpoint()
+
+    updated_before = request.get_json()['updated_before']
+    updated_before = convert_date(updated_before)
+
+    subquery = db.session.query(
+                        PostVersion.sun_post_id.label('sun_post_id'), 
+                        db.func.max(PostVersion.sun_post_version_id).label('max_version_id'))\
+                        .group_by(PostVersion.sun_post_id).subquery()
+
+    mr_query = Post.query.join(PostVersion)\
+                    .join(subquery, db.and_(PostVersion.sun_post_id == subquery.c.sun_post_id, 
+                                            PostVersion.sun_post_version_id == subquery.c.max_version_id))\
+                    .filter(Post.most_recent_version_updated_at < updated_before)\
+                    .with_entities(Post.sun_post_id.label('sun_post_id'), 
+                                PostVersion.sun_post_version_id.label('most_recent_version_id'),
+                                PostVersion.sun_created_at.label('most_recent_version_updated_at'))
+
+
+    posts = Post.query.with_entities(Post.reddit_unique_id,
+                               Post.most_recent_detail.ups).all()
+
     return jsonify([p.to_dict() for p in posts]), 200
 
 redis_q = Queue('SunbeltInsertQueue', connection=conn)

@@ -10,7 +10,9 @@ from sqlalchemy import func
 
 @convert_kwargs_to_snake_case
 def resolve_posts(obj, info, **kwargs):
-    
+    post_selections = [x for x in info.field_nodes[0].selection_set.selections if x.name.value == 'posts'][0]
+    fields = [x.name.value for x in post_selections.selection_set.selections]
+
     def convert_date(date):
         try:
             return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
@@ -28,6 +30,7 @@ def resolve_posts(obj, info, **kwargs):
     sun_subreddit_id = kwargs.get('sun_subreddit_id')
     sun_account_id = kwargs.get('sun_account_id')
     limit = kwargs.get('limit')
+    offset = kwargs.get('offset')
 
     posts = Post.query
 
@@ -56,6 +59,8 @@ def resolve_posts(obj, info, **kwargs):
         posted_after = convert_date(posted_after)
         posts = posts.filter(Post.sun_created_at > posted_after)
     
+
+
     if order_by: # Not sure this is necessary anymore
         posts = posts.join(PostVersion)
         posts = posts.join(PostDetail)
@@ -72,13 +77,28 @@ def resolve_posts(obj, info, **kwargs):
             elif sort_by == 'desc':
                 posts = posts.order_by(col_to_order_by.desc())
 
+    total_count = posts.count()
+
+    if offset:
+        posts = posts.offset(offset)
+
     if limit:
         posts = posts.limit(limit)
 
+    for field in fields.copy():
+        if field in PostDetail.__table__.c.keys():
+            fields.remove(field)
+            fields.append('most_recent_detail.' + field)
+
+    breakpoint()
+    posts = posts.with_entities(*[getattr(Post, field) for field in fields]).all()    
+
+
     try:
-        posts = [post.to_dict() for post in posts]
+        posts = [dict(zip(fields, post)) for post in posts]
         payload = {
             "success": True,
+            "total_count": total_count,
             "posts": posts
         }
     except Exception as error:
@@ -90,6 +110,7 @@ def resolve_posts(obj, info, **kwargs):
 
 @convert_kwargs_to_snake_case
 def resolve_post(obj, info, **kwargs):
+
     by_id = kwargs.get('by_id')
     reddit_id = kwargs.get('reddit_id')
     errors = []
@@ -193,6 +214,7 @@ def resolve_comments(obj, info, **kwargs):
     reddit_ids = kwargs.get('reddit_ids')
     sun_subreddit_id = kwargs.get('sun_subreddit_id')
     limit = kwargs.get('limit')
+    offset = kwargs.get('offset')
 
     comments = Comment.query
 
@@ -239,14 +261,19 @@ def resolve_comments(obj, info, **kwargs):
             elif sort_by == 'desc':
                 comments = comments.order_by(col_to_order_by.desc())
 
+    total_count = comments.count()
+
     if limit:
         comments = comments.limit(limit)
 
+    if offset:
+        comments = comments.offset(offset)
 
     try:
         comments = [comment.to_dict() for comment in comments]
         payload = {
             "success": True,
+            "total_count": total_count,
             "comments": comments
         }
     except Exception as error:
@@ -351,6 +378,8 @@ def resolve_accounts(obj, info, **kwargs):
     updated_before = kwargs.get('updated_before')
     updated_after = kwargs.get('updated_after')
     order_by = kwargs.get('order_by')
+    limit = kwargs.get('limit')
+    offset = kwargs.get('offset')
 
     accounts = Account.query
 
@@ -387,11 +416,20 @@ def resolve_accounts(obj, info, **kwargs):
                 accounts = accounts.order_by(col_to_order_by.asc())
             elif sort_by == 'desc':
                 accounts = accounts.order_by(col_to_order_by.desc())
-        
+    
+    total_count = accounts.count()
+
+    if limit:
+        accounts = accounts.limit(limit)
+
+    if offset:
+        accounts = accounts.offset(offset)
+
     try:
         accounts = [account.to_dict() for account in accounts]
         payload = {
             "success": True,
+            "total_count": total_count,
             "accounts": accounts
         }
     except Exception as error:
@@ -492,74 +530,85 @@ def resolve_account_details(obj, info, **kwargs):
 @convert_kwargs_to_snake_case
 def resolve_subreddits(obj, info, **kwargs):
         
-        def convert_date(date):
-            try:
-                return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
-            except ValueError:
-                return datetime.strptime(date, '%d-%m-%Y')
-            except:
-                raise ValueError("Invalid date format, should be 'dd-mm-yyyy' or 'dd-mm-yyyy hh:mm:ss'")
-        
-        created_before = kwargs.get('created_before')
-        created_after = kwargs.get('created_after')
-        updated_before = kwargs.get('updated_before')
-        updated_after = kwargs.get('updated_after')
-        reddit_ids = kwargs.get('reddit_ids')
-        names = kwargs.get('names')
-        order_by = kwargs.get('order_by')
-
-        subreddits = Subreddit.query
-        
-        if names:
-            subreddits = subreddits.filter(func.lower(Subreddit.display_name).in_(names))
-
-        if reddit_ids:
-            subreddits = subreddits.filter(Subreddit.reddit_subreddit_id.in_(reddit_ids))
-
-        if updated_before:
-            updated_before = convert_date(updated_before)
-            subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at < updated_before)
-
-        if updated_after:
-            updated_after = convert_date(updated_after)
-            subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at > updated_after)
-
-        if created_before:
-            created_before = convert_date(created_before)
-            subreddits = subreddits.filter(Subreddit.sun_created_at < created_before)
-    
-        if created_after:
-            created_after = convert_date(created_after)
-            subreddits = subreddits.filter(Subreddit.sun_created_at > created_after)
-
-        if order_by: # Not sure this is necessary anymore this should maybe be a hybrid property
-            subreddits = subreddits.join(SubredditVersion)
-            subreddits = subreddits.join(SubredditDetail)
-            order_by_to_cols = {
-                'sun_unique_id' : Subreddit.sun_subreddit_id,
-                'most_recent_sun_version_id': SubredditVersion.sun_subreddit_version_id,
-                'most_recent_sun_detail_id': SubredditDetail.sun_subreddit_detail_id
-            }
-
-            for col, sort_by in order_by.items():
-                col_to_order_by = order_by_to_cols.get(col)
-                if sort_by == 'asc':
-                    subreddits = subreddits.order_by(col_to_order_by.asc())
-                elif sort_by == 'desc':
-                    subreddits = subreddits.order_by(col_to_order_by.desc())
-            
+    def convert_date(date):
         try:
-            subreddits = [subreddit.to_dict() for subreddit in subreddits]
-            payload = {
-                "success": True,
-                "subreddits": subreddits
-            }
-        except Exception as error:
-            payload = {
-                "success": False,
-                "errors": [str(error)]
-            }
-        return payload
+            return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
+        except ValueError:
+            return datetime.strptime(date, '%d-%m-%Y')
+        except:
+            raise ValueError("Invalid date format, should be 'dd-mm-yyyy' or 'dd-mm-yyyy hh:mm:ss'")
+    
+    created_before = kwargs.get('created_before')
+    created_after = kwargs.get('created_after')
+    updated_before = kwargs.get('updated_before')
+    updated_after = kwargs.get('updated_after')
+    reddit_ids = kwargs.get('reddit_ids')
+    names = kwargs.get('names')
+    order_by = kwargs.get('order_by')
+    limit = kwargs.get('limit')
+    offset = kwargs.get('offset')
+
+    subreddits = Subreddit.query
+    
+    if names:
+        subreddits = subreddits.filter(func.lower(Subreddit.display_name).in_(names))
+
+    if reddit_ids:
+        subreddits = subreddits.filter(Subreddit.reddit_subreddit_id.in_(reddit_ids))
+
+    if updated_before:
+        updated_before = convert_date(updated_before)
+        subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at < updated_before)
+
+    if updated_after:
+        updated_after = convert_date(updated_after)
+        subreddits = subreddits.filter(Subreddit.most_recent_version_updated_at > updated_after)
+
+    if created_before:
+        created_before = convert_date(created_before)
+        subreddits = subreddits.filter(Subreddit.sun_created_at < created_before)
+
+    if created_after:
+        created_after = convert_date(created_after)
+        subreddits = subreddits.filter(Subreddit.sun_created_at > created_after)
+
+    if order_by: # Not sure this is necessary anymore this should maybe be a hybrid property
+        subreddits = subreddits.join(SubredditVersion)
+        subreddits = subreddits.join(SubredditDetail)
+        order_by_to_cols = {
+            'sun_unique_id' : Subreddit.sun_subreddit_id,
+            'most_recent_sun_version_id': SubredditVersion.sun_subreddit_version_id,
+            'most_recent_sun_detail_id': SubredditDetail.sun_subreddit_detail_id
+        }
+
+        for col, sort_by in order_by.items():
+            col_to_order_by = order_by_to_cols.get(col)
+            if sort_by == 'asc':
+                subreddits = subreddits.order_by(col_to_order_by.asc())
+            elif sort_by == 'desc':
+                subreddits = subreddits.order_by(col_to_order_by.desc())
+
+    total_count = subreddits.count()
+
+    if limit:
+        subreddits = subreddits.limit(limit)
+
+    if offset:
+        subreddits = subreddits.offset(offset)
+        
+    try:
+        subreddits = [subreddit.to_dict() for subreddit in subreddits]
+        payload = {
+            "success": True,
+            "total_count": total_count,
+            "subreddits": subreddits
+        }
+    except Exception as error:
+        payload = {
+            "success": False,
+            "errors": [str(error)]
+        }
+    return payload
 
 @convert_kwargs_to_snake_case
 def resolve_subreddit(obj, info, **kwargs):

@@ -283,6 +283,7 @@ type PostsResult {
     success: Boolean!
     errors: [String]
     posts: [Post]
+    total_count: Int
 }
 
 type PostDetailResult {
@@ -308,6 +309,7 @@ type CommentsResult {
     success: Boolean!
     errors: [String]
     comments: [Comment]
+    total_count: Int
 }
 
 type CommentDetailResult {
@@ -333,6 +335,7 @@ type AccountsResult {
     success: Boolean!
     errors: [String]
     accounts: [Account]
+    total_count: Int
 }
 
 type AccountDetailResult {
@@ -358,6 +361,7 @@ type SubredditsResult {
     success: Boolean!
     errors: [String]
     subreddits: [Subreddit]
+    total_count: Int
 }
 
 type SubredditDetailResult {
@@ -384,7 +388,8 @@ type Query {
           orderBy: OrderByInput,
           sun_subreddit_id: Int,
           sun_account_id: Int,
-          limit: Int): PostsResult!
+          limit: Int,
+          offset: Int): PostsResult!
 
     comment(byId: ID, reddit_id: String): CommentResult!
     commentdetail(byId: Int!): CommentDetailResult!
@@ -398,7 +403,8 @@ type Query {
           sun_post_id: Int,
           sun_subreddit_id: Int,
             sun_account_id: Int,
-          limit: Int): CommentsResult!
+          limit: Int,
+          offset: Int): CommentsResult!
 
     account(byId: ID, reddit_id: String, name: String): AccountResult!
     accountdetail(byId: Int!): AccountDetailResult!
@@ -408,7 +414,8 @@ type Query {
           updatedBefore: String, 
           updatedAfter: String,
           orderBy: OrderByInput,
-          limit: Int): AccountsResult!
+          limit: Int,
+          offset: Int): AccountsResult!
 
     subreddit(byId: ID, reddit_id: String, name: String): SubredditResult!
     subredditdetail(byId: Int!): SubredditDetailResult!
@@ -420,7 +427,8 @@ type Query {
           updatedBefore: String, 
           updatedAfter: String,
           orderBy: OrderByInput,
-          limit: Int): SubredditsResult!
+          limit: Int,
+          offset: Int): SubredditsResult!
 }
 
 
