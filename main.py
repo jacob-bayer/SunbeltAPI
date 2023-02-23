@@ -15,6 +15,14 @@ from flask import request, jsonify
 from api.queries import *
 from api.mutations import *
 
+from rq import Queue
+from redis_worker import conn
+
+from flask_jwt_extended import (jwt_required,
+                                get_jwt_identity)
+
+from api.batch_add import batch_create_from_json
+
 query = ObjectType("Query")
 
 query.set_field("post", resolve_post)
@@ -71,25 +79,21 @@ def graphql_server():
     return jsonify(result), status_code
 
 
-# The purpose of this is to try to run the app and get package dependency errors
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
-from rq import Queue
-from redis_worker import conn
-
-from flask_jwt_extended import (jwt_required,
-                                get_jwt_identity)
-
-from api.batch_add import batch_create_from_json
+# REST endpoint that gets all posts based on a list of reddit ids
+@app.route("/posts", methods=["POST"])
+def get_posts():
+    data = request.get_json()
+    ids = data.get("ids")
+    if ids is None:
+        return jsonify({"msg": "No ids provided"}), 400
+    posts = Post.query.filter(Post.reddit_post_id.in_(ids)).all()
+    return jsonify([p.to_dict() for p in posts]), 200
 
 redis_q = Queue('SunbeltInsertQueue', connection=conn)
 
 @app.route("/add_batch_data", methods=["POST"])
 @jwt_required()
 def queue_mutation():
-    breakpoint()
     current_user = get_jwt_identity()
     if current_user != 'admin':
         return jsonify({"msg": "Not authorized"}), 401
@@ -102,5 +106,3 @@ def queue_mutation():
     except Exception as e:
         return jsonify({"success": False, "error": e}), 400
 
-if __name__ == '__main__':
-    app.run(debug=True, port=8000)
