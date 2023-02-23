@@ -89,14 +89,18 @@ redis_q = Queue('SunbeltInsertQueue', connection=conn)
 @app.route("/add_batch_data", methods=["POST"])
 @jwt_required()
 def queue_mutation():
+    breakpoint()
     current_user = get_jwt_identity()
     if current_user != 'admin':
         return jsonify({"msg": "Not authorized"}), 401
     try:
+
+        # This is not going to fail unless redis doesn't work
+        # TODO: Figure out a way to handle redis errrors
         redis_q.enqueue(batch_create_from_json, request.json)
         return jsonify({"success": True}), 200
     except Exception as e:
-        return jsonify({"error": e}), 400
+        return jsonify({"success": False, "error": e}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)

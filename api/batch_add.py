@@ -48,6 +48,8 @@ def write_statistics_to_file(checkpoints, length_of_data, kind):
 
 def create_objects(kind, dict_of_dicts):
 
+    original_data = dict_of_dicts.copy()
+
     checkpoints = {}
 
     write_statistics = False
@@ -144,14 +146,14 @@ def create_objects(kind, dict_of_dicts):
         sqla_objs_to_write += [generate_sqla_obj(item, models['version'], model_columns['version'])]
         sqla_objs_to_write += [generate_sqla_obj(item, models['detail'], model_columns['detail'])]
 
-        # for sqla_obj in sqla_objs_to_write:
-        #     try:
-        #         db.session.add(sqla_obj)
-        #         db.session.commit()
-        #     except:
-        #         db.session.rollback()
-        #         print(sqla_obj.reddit_unique_id)
-        #         raise Exception('Error writing to database')
+    # for sqla_obj in sqla_objs_to_write:
+    #     try:
+    #         db.session.add(sqla_obj)
+    #         db.session.commit()
+    #     except:
+    #         db.session.rollback()
+    #         print(sqla_obj.reddit_unique_id)
+    #         raise Exception('Error writing to database')
 
     checkpoints['db_objs_created'] = datetime_now_if_true(write_statistics)
     db.session.add_all(sqla_objs_to_write)
@@ -174,7 +176,10 @@ def create_objects(kind, dict_of_dicts):
         raise e
 
     except Exception as e:
+        with open('../analysis/test_json_from_api.json', 'w') as f:
+            f.write(json.dumps(original_data))
         db.session.rollback()
+        breakpoint()
         payload = {'success': False,
                    'error': e}
         raise e
@@ -193,6 +198,8 @@ def batch_create_from_json(from_json):
     kinds = ['post', 'comment', 'account', 'subreddit']
     for kind in kinds:
         data = {x[f'reddit_{kind}_id']: x for x in from_dict if x['kind'] == kind}
+        print(f'Creating {len(data)} {kind}s')
+        
         result = create_objects(kind, data)
         if result['success']:
             objs_created += result['objs_created']
