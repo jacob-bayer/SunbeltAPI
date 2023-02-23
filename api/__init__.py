@@ -11,7 +11,8 @@ from flask_migrate import Migrate
 from datetime import datetime, timedelta
 
 
-from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, get_jwt_identity, get_jwt
+from flask_jwt_extended import (JWTManager, create_access_token, create_refresh_token, 
+                                get_jwt_identity, jwt_required)
 
 
 from ariadne import QueryType
@@ -51,21 +52,19 @@ def auth():
     refresh_token = create_refresh_token(identity=username)
     return jsonify(access_token=access_token, refresh_token=refresh_token), 200
 
-# Using an `after_request` callback, we refresh any token that is within 30
-# minutes of expiring. Change the timedeltas to match the needs of your application.
-@app.after_request
-def refresh_expiring_jwts(response):
+@app.route('/refresh', methods=['POST'])
+@jwt_required()
+def refresh():
+    refresh_token = request.json.get('refresh_token', None)
+    if not refresh_token:
+        return jsonify({"msg": "Missing refresh token"}), 401
     try:
-        exp_timestamp = get_jwt()["exp"]
-        now = datetime.now(timezone.utc)
-        target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
-        if target_timestamp > exp_timestamp:
-            access_token = create_access_token(identity=get_jwt_identity())
-            set_access_cookies(response, access_token)
-        return response
-    except (RuntimeError, KeyError):
-        # Case where there is not a valid JWT. Just return the original response
-        return response
+        identity = get_jwt_identity()
+    except:
+        return jsonify({"msg": "Invalid refresh token"}), 401
+    access_token = create_access_token(identity=identity)
+    refresh_token = create_refresh_token(identity=username)
+    return jsonify(access_token=access_token, refresh_token=refresh_token), 200
 
 @app.errorhandler(500)
 def server_error(e):
