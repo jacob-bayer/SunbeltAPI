@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import db
-from sqlalchemy.orm import relationship, reconstructor
+from sqlalchemy.orm import relationship, reconstructor, aliased
 from sqlalchemy import ( BigInteger, Boolean, Column, DateTime, Float, ForeignKey, 
                         Identity, Index, Integer, Text, text, Numeric, Computed )
 
@@ -476,16 +476,40 @@ class Post(db.Model):
     def most_recent_version(self):
         return self.versions[-1]
 
+    @most_recent_version.expression
+    def most_recent_version(cls):
+        version_alias = aliased(PostVersion)
+        subquery = (db.session.query(version_alias)
+                    .filter(version_alias.sun_post_id == cls.sun_post_id)
+                    .order_by(version_alias.sun_post_version_id.desc())
+                    .limit(1)
+                    .subquery())
+
+        def _get_field(field):
+        # Return the column for the given field in PostDetail model
+            breakpoint()
+            return getattr(subquery.c, field)
+
+        return _get_field
+
     @hybrid_property
     def most_recent_detail(self):
         return self.versions[-1].detail
 
     @most_recent_detail.expression
     def most_recent_detail(cls):
-        return select([PostDetail])\
-                .join(PostVersion)\
+        most_recent_detail_id = select([PostVersion.sun_post_detail_id])\
                 .where(PostVersion.sun_post_id == cls.sun_post_id)\
-                    .order_by(PostVersion.sun_post_version_id.desc()).limit(1).as_scalar()
+                    .order_by(PostVersion.sun_post_version_id.desc()\
+                        ).limit(1).subquery()
+        
+        all_postdetail_columns = [x for x in PostDetail.__table__.columns]
+        #breakpoint()
+        return select(all_postdetail_columns)\
+                .select_from(PostDetail.__table__.join(most_recent_detail_id,
+                             PostDetail.sun_post_detail_id == most_recent_detail_id.c.sun_post_detail_id))
+
+
 
     @hybrid_property
     def most_recent_version_updated_at(self):

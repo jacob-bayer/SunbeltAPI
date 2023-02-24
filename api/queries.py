@@ -4,7 +4,8 @@
 from .models import *
 from ariadne import convert_kwargs_to_snake_case
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, text
+
 
 ######### POSTS ###########
 
@@ -34,6 +35,17 @@ def resolve_posts(obj, info, **kwargs):
 
     posts = Post.query
 
+    subquery = db.session.query(
+                            PostVersion.sun_unique_id.label('sun_unique_id'), 
+                            db.func.max(PostVersion.sun_version_id).label('max_version_id'))\
+                            .group_by(PostVersion.sun_unique_id).subquery()
+
+    posts = posts.join(PostVersion)\
+                        .join(subquery, db.and_(PostVersion.sun_unique_id == subquery.c.sun_unique_id, 
+                                                PostVersion.sun_version_id == subquery.c.max_version_id))\
+                        .join(PostDetail)
+
+
     if reddit_ids:
         posts = posts.filter(Post.reddit_post_id.in_(reddit_ids))
 
@@ -45,11 +57,11 @@ def resolve_posts(obj, info, **kwargs):
 
     if updated_before:
         updated_before = convert_date(updated_before)
-        posts = posts.filter(Post.most_recent_version_updated_at < updated_before)
+        posts = posts.filter(PostVersion.sun_created_at < updated_before)
 
     if updated_after:
         updated_after = convert_date(updated_after)
-        posts = posts.filter(Post.most_recent_version_updated_at > updated_after)
+        posts = posts.filter(PostVersion.sun_created_at > updated_after)
 
     if posted_before:
         posted_before = convert_date(posted_before)
@@ -85,17 +97,19 @@ def resolve_posts(obj, info, **kwargs):
     if limit:
         posts = posts.limit(limit)
 
-    for field in fields.copy():
-        if field in PostDetail.__table__.c.keys():
-            fields.remove(field)
-            fields.append('most_recent_detail.' + field)
+    fields = ['reddit_post_id',
+                'reddit_account_id',
+                'ups',
+                'selftext',
+                'posts.posts.sun_post_id']
 
-    breakpoint()
-    posts = posts.with_entities(*[getattr(Post, field) for field in fields]).all()    
+    posts = posts.with_entities(*[db.text(field) for field in fields]).all()    
 
+    # convert list of sqlalchemy tuples to list of dicts
 
     try:
         posts = [dict(zip(fields, post)) for post in posts]
+        #posts = [post.to_dict() for post in posts]
         payload = {
             "success": True,
             "total_count": total_count,
