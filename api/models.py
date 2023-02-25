@@ -1,29 +1,36 @@
 # -*- coding: utf-8 -*-
 
 from . import db
-from sqlalchemy.orm import relationship, reconstructor, aliased
+from sqlalchemy.orm import relationship, reconstructor, aliased, synonym
 from sqlalchemy import ( BigInteger, Boolean, Column, DateTime, Float, 
-                        ForeignKey, Index, Integer, Text, text, Numeric, select, desc)
-
-
-# used for sorting by properties
-# https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
+                        ForeignKey, Index, Integer, Text, text, Numeric, select, desc, func)
 from sqlalchemy.ext.hybrid import hybrid_property
+
 
 def col_equals(column_name, string):
     def default_function(context):
         return context.current_parameters.get(column_name) == string
     return default_function
 
-
 class Subreddit(db.Model):
     __tablename__ = 'subreddits'
     __table_args__ = {'schema': 'subreddits'}
 
+    # main id
     sun_subreddit_id = Column(BigInteger, primary_key=True, index=True)
+
+    # reddit id
     reddit_subreddit_id = Column(Text, nullable=False, index = True)
-    url = Column(Text, nullable=False)
+
+    # id synonyms
+    sun_unique_id = synonym('sun_subreddit_id')
+    reddit_unique_id = synonym('reddit_subreddit_id')
+
+    # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+
+    # data
+    url = Column(Text, nullable=False)
     display_name_prefixed = Column(Text)
     title = Column(Text)
     display_name = Column(Text)
@@ -34,29 +41,8 @@ class Subreddit(db.Model):
     is_enrolled_in_new_modmail = Column(Text)
 
     posts = relationship('Post', back_populates='subreddit')
-    versions = relationship('SubredditVersion', back_populates='subreddit')
+    versions = relationship('SubredditDetail', back_populates='subreddit')
 
-    @hybrid_property
-    def reddit_unique_id(self):
-        return self.reddit_subreddit_id
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_subreddit_id
-
-    @property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
-
-    @hybrid_property
-    def most_recent_version_updated_at(self):
-        return self.versions[-1].sun_created_at
-
-    @most_recent_version_updated_at.expression
-    def most_recent_version_updated_at(cls):
-        return select([SubredditVersion.sun_created_at])\
-                .where(SubredditVersion.sun_subreddit_id == cls.sun_subreddit_id)\
-                    .order_by(SubredditVersion.sun_created_at.desc()).limit(1).as_scalar()
 
     def to_dict(self):
         main_dict = {
@@ -80,64 +66,26 @@ class Subreddit(db.Model):
         }
         most_recent_details_dict = {key: value for key, value in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
-    
-
-class SubredditVersion(db.Model):
-    __tablename__ = 'subreddit_versions'
-    __table_args__ = (
-        Index('ix_subreddits_subreddit_versions', 'sun_subreddit_id', 'sun_subreddit_version_id', 'sun_subreddit_detail_id'),
-        {'schema': 'subreddits'}
-    )
-
-    sun_subreddit_id = Column(ForeignKey(Subreddit.sun_subreddit_id), primary_key=True, index=True)
-    sun_subreddit_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    sun_subreddit_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-
-    subreddit = relationship('Subreddit', back_populates='versions')
-    detail = relationship('SubredditDetail', uselist = False, back_populates='version')
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_subreddit_id
-
-    @hybrid_property
-    def sun_version_id(self):
-        return self.sun_subreddit_version_id
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_subreddit_detail_id
-
-    # TODO:
-    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
-    # So that the detail has the version id
-    # This will make it easier to move variables like removed, edited, deleted to the main table
-    # As a workaround, the below works
-
-
-    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
-    # This essentially makes the version usable as a detail
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.init_on_load()
-
-    @reconstructor
-    def init_on_load(self):
-        if self.detail:
-            detail_vars = self.detail.to_dict()
-            for var, value in detail_vars.items():
-                if not hasattr(self, var):
-                    setattr(self, var, value)
 
 
 class SubredditDetail(db.Model):
     __tablename__ = 'subreddit_details'
     __table_args__ = {'schema': 'subreddits'}
 
-    sun_subreddit_detail_id = Column(ForeignKey(SubredditVersion.sun_subreddit_detail_id), primary_key=True, index=True)
+    # main ids
+    sun_subreddit_detail_id = Column(BigInteger, primary_key=True, index=True)
+    sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=False, index=True)
+    sun_subreddit_version_id = Column(BigInteger, nullable=False, index=True)
+    
+    # id synonyms
+    sun_unique_id = synonym('sun_subreddit_id')
+    sun_version_id = synonym('sun_subreddit_version_id')
+    sun_detail_id = synonym('sun_subreddit_detail_id')
+
+    # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    
+    # data
     active_user_count = Column(BigInteger)
     accounts_active = Column(BigInteger)
     public_traffic = Column(Boolean)
@@ -212,11 +160,7 @@ class SubredditDetail(db.Model):
     allow_predictions_tournament = Column(Boolean)
     videostream_links_count = Column(Float(53))
 
-    version = relationship('SubredditVersion', back_populates='detail')
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_subreddit_detail_id
+    subreddit = relationship('Subreddit', back_populates='versions')
 
     def to_dict(self):
         return {
@@ -274,27 +218,25 @@ class Account(db.Model):
     __tablename__ = 'accounts'
     __table_args__ = {'schema': 'accounts'}
 
+    # Main ids
     sun_account_id = Column(BigInteger, primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    name = Column(Text, nullable=False)
     reddit_account_id = Column(Text, nullable=False, index=True)
+    
+    # Id synonyms
+    sun_unique_id = synonym('sun_account_id')
+    reddit_unique_id = synonym('reddit_account_id')
+
+    # Row added timestamp
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    
+    # data
+    name = Column(Text, nullable=False)
     created = Column(Float(53))
     created_utc = Column(Float(53))
 
+    # relationships
     posts = relationship('Post', back_populates='author')
-    versions = relationship('AccountVersion', back_populates='account')
-
-    @hybrid_property
-    def reddit_unique_id(self):
-        return self.reddit_account_id
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_account_id
-
-    @property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
+    versions = relationship('AccountDetail', back_populates='account')
 
     @hybrid_property
     def most_recent_version_updated_at(self):
@@ -302,9 +244,9 @@ class Account(db.Model):
 
     @most_recent_version_updated_at.expression
     def most_recent_version_updated_at(cls):
-        return select([AccountVersion.sun_created_at])\
-                .where(AccountVersion.sun_account_id == cls.sun_account_id)\
-                    .order_by(AccountVersion.sun_created_at.desc()).limit(1).as_scalar()
+        return select([AccountDetail.sun_created_at])\
+                .where(AccountDetail.sun_account_id == cls.sun_account_id)\
+                    .order_by(AccountDetail.sun_created_at.desc()).limit(1).as_scalar()
 
     def __repr__(self):
         return f'SunAccount({self.sun_account_id})'
@@ -325,62 +267,25 @@ class Account(db.Model):
         most_recent_detail_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_detail_dict}
 
-class AccountVersion(db.Model):
-    __tablename__ = 'account_versions'
-    __table_args__ = (
-        Index('ix_accounts_account_versions', 'sun_account_id', 'sun_account_version_id', 'sun_account_detail_id'),
-        {'schema': 'accounts'}
-    )
-
-    sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id), primary_key=True, nullable=False)
-    sun_account_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    sun_account_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-
-    account = relationship('Account', back_populates='versions')
-    detail = relationship('AccountDetail', uselist = False, back_populates='version')
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_account_id
-
-    @hybrid_property
-    def sun_version_id(self):
-        return self.sun_account_version_id
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_account_detail_id
-
-    # TODO:
-    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
-    # So that the detail has the version id
-    # This will make it easier to move variables like removed, edited, deleted to the main table
-    # As a workaround, the below works
-
-
-    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
-    # This essentially makes the version usable as a detail
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.init_on_load()
-
-    @reconstructor
-    def init_on_load(self):
-        if self.detail:
-            detail_vars = self.detail.to_dict()
-            for var, value in detail_vars.items():
-                if not hasattr(self, var):
-                    setattr(self, var, value)
-
 
 class AccountDetail(db.Model):
     __tablename__ = 'account_details'
     __table_args__ = {'schema': 'accounts'}
 
-    sun_account_detail_id = Column(BigInteger, ForeignKey(AccountVersion.sun_account_detail_id), unique = True, primary_key=True, index=True)
+    # main ids
+    sun_account_detail_id = Column(BigInteger, unique = True, primary_key=True, index=True)
+    sun_account_version_id = Column(BigInteger)
+    sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
+
+    # id synonyms
+    sun_unique_id = synonym('sun_account_id')
+    sun_version_id = synonym('sun_account_version_id')
+    sun_detail_id = synonym('sun_account_detail_id')
+
+    # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+
+    # data
     comment_karma = Column(BigInteger)
     link_karma = Column(BigInteger)
     total_karma = Column(BigInteger)
@@ -400,11 +305,7 @@ class AccountDetail(db.Model):
     accept_followers = Column(Boolean)
     #has_verified_email = Column(Boolean)
 
-    version = relationship('AccountVersion', back_populates='detail')
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_account_detail_id
+    account = relationship('Account', back_populates='versions')
 
     def to_dict(self):
         return {
@@ -434,13 +335,23 @@ class Post(db.Model):
     __tablename__ = 'posts'
     __table_args__ = {'schema': 'posts'}
 
+    # sun ids
     sun_post_id = Column(BigInteger, primary_key=True, index=True)
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
+
+    # reddit ids
     reddit_post_id = Column(Text, nullable=False, index = True)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
+
+    # id synonyms
+    sun_unique_id = synonym('sun_post_id')
+    reddit_unique_id = synonym('reddit_post_id')
+    
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    
+    # data
     title = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
     approved_at_utc = Column(Text)
@@ -460,7 +371,7 @@ class Post(db.Model):
 
     subreddit = relationship(Subreddit, back_populates='posts')
     author = relationship(Account, back_populates='posts')
-    versions = relationship('PostVersion', back_populates='post') #, order_by='PostVersion.sun_created_at')
+    versions = relationship('PostDetail', back_populates='post') #, order_by='PostVersion.sun_created_at')
 
     #most_recent_version = relationship(PostVersion, backref=backref('all_info', order_by='ThingInfo.recorded_at')
 
@@ -497,42 +408,31 @@ class Post(db.Model):
     #     )
 
 
-    # @hybrid_property
-    # def most_recent_detail(self):
-    #     return self.versions[-1].detail
+    @hybrid_property
+    def most_recent_version(self):
+        return self.versions[-1]
+   
 
     # @most_recent_version.expression
     # def most_recent_version(cls):
-    #     return (
-    #         select(PostVersion)
-    #         .where(PostVersion.sun_post_id == cls.sun_post_id)
-    #         .order_by(desc(PostVersion.sun_post_version_id))
-    #         .limit(1)
-    #         .as_scalar()
-    #     )
-    
-    # @most_recent_detail.expression
-    # def most_recent_detail(cls):
-    #     version = cls.most_recent_version
-    #     return (
-    #         select(PostDetail)
-    #         .where(PostDetail.sun_post_detail_id == version.sun_post_detail_id)
-    #         .limit(1)
-    #         .as_scalar()
-    #     )
+    #     return select([text(x) for x in PostDetail.__table__.c.keys()])\
+    #             .where(PostDetail.sun_post_id == cls.sun_post_id)\
+    #                 .order_by(PostDetail.sun_created_at.desc()).limit(1)
 
-    # @most_recent_detail.expression
-    # def most_recent_detail(cls):
-    #     most_recent_detail_id = select([PostVersion.sun_post_detail_id])\
-    #             .where(PostVersion.sun_post_id == cls.sun_post_id)\
-    #                 .order_by(PostVersion.sun_post_version_id.desc()\
-    #                     ).limit(1).subquery()
+    @most_recent_version.expression
+    def most_recent_version(cls, field):
+        subquery = (select(func.max(PostDetail.sun_post_version_id).label('max_post_version_id'))
+                    .where(PostDetail.sun_post_id == cls.sun_post_id)
+                    .correlate(cls.__table__)
+                    .scalar_subquery())
+        return (select(getattr(PostDetail, field))
+                .where(PostDetail.sun_post_version_id == subquery)
+                .correlate(cls.__table__)
+                .as_scalar())
 
-    #     all_postdetail_columns = [x for x in PostDetail.__table__.columns]
 
-    #     return select(all_postdetail_columns)\
-    #             .select_from(PostDetail.__table__.join(most_recent_detail_id,
-    #                          PostDetail.sun_post_detail_id == most_recent_detail_id.c.sun_post_detail_id))
+    def mrv_field(self, field):
+        return self.__class__.most_recent_version(field).label(field)
 
     # @hybrid_property
     # def most_recent_version_updated_at(self):
@@ -595,14 +495,25 @@ class Post(db.Model):
 
 
 
-class PostVersion(Post):
+class PostDetail(db.Model):
     __tablename__ = 'post_details'
     __table_args__ = {'schema': 'posts'}
 
+    # main ids
     sun_post_detail_id = Column(BigInteger,  primary_key=True, index=True)
     sun_post_version_id = Column(BigInteger, nullable=False)
     sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=False)
-    version_updated_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+
+    # id synonyms
+    sun_unique_id = synonym('sun_post_id')
+    sun_version_id = synonym('sun_post_version_id')
+    sun_detail_id = synonym('sun_post_detail_id')
+
+    # Row added timestamp
+    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    version_updated_at = synonym('sun_created_at')
+    
+    # data
     gilded = Column(BigInteger)
     selftext = Column(Text)
     downs = Column(BigInteger)
@@ -684,6 +595,7 @@ class PostVersion(Post):
     link_flair_template_id = Column(Text)
     source_is_pushshift = Column(Boolean, nullable=False, server_default=text('false'))
 
+
     # awardings = relationship('PostAwarding', back_populates='detail')
     # gildings = relationship('PostGilding', back_populates='detail')
     # media = relationship('PostMedia', back_populates='detail')
@@ -693,8 +605,13 @@ class PostVersion(Post):
     post = relationship('Post', back_populates='versions')
 
     @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_post_detail_id
+    def is_most_recent_version(self):
+        return self.sun_detail_id == self.post.most_recent_version.sun_detail_id
+
+    @is_most_recent_version.expression
+    def is_most_recent_version(cls):
+        max_id_per_post = db.session.query(func.max(PostDetail.sun_post_detail_id).label('mr_detail_id')).group_by(PostDetail.sun_post_id).subquery()
+        return cls.sun_detail_id.in_(max_id_per_post)
 
     def to_dict(self):
         return {
@@ -860,24 +777,36 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'comments'}
 
+    # main ids
     sun_comment_id = Column(BigInteger, primary_key=True, index=True)
     sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=True) 
     sun_subreddit_id = Column(BigInteger, ForeignKey(Subreddit.sun_subreddit_id), nullable=True)
     sun_account_id = Column(BigInteger, ForeignKey(Account.sun_account_id))
+    
+    # reddit ids
     reddit_comment_id = Column(Text, nullable=False, index=True)
     reddit_parent_id = Column(Text)
     reddit_post_id = Column(Text, nullable=False)
     reddit_subreddit_id = Column(Text, nullable=False)
     reddit_account_id = Column(Text)
+    
+    # id synonyms
+    sun_unique_id = synonym('sun_comment_id')
+    reddit_unique_id = synonym('reddit_comment_id')
+
+    # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    
+    # data
     created_utc = Column(Numeric)
     depth = Column(BigInteger)
     permalink = Column(Text)
     is_submitter = Column(Boolean)
     created = Column(Numeric)
 
+    # relationships
     author = relationship('Account')
-    versions = relationship('CommentVersion', back_populates='comment')
+    versions = relationship('CommentDetail', back_populates='comment')
     post = relationship('Post')
     subreddit = relationship('Subreddit')
 
@@ -893,30 +822,16 @@ class Comment(db.Model):
                 return Post.query.filter(Post.reddit_post_id == self.reddit_parent_id).first()
         else:
             return None
-    
-    @hybrid_property
-    def reddit_unique_id(self):
-        return self.reddit_comment_id
 
-    # allows sort by this
-    # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_comment_id
+    # @hybrid_property
+    # def most_recent_version_updated_at(self):
+    #     return self.versions[-1].sun_created_at
 
-    @property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
-
-    @hybrid_property
-    def most_recent_version_updated_at(self):
-        return self.versions[-1].sun_created_at
-
-    @most_recent_version_updated_at.expression
-    def most_recent_version_updated_at(cls):
-        return select([CommentVersion.sun_created_at])\
-                .where(CommentVersion.sun_comment_id == cls.sun_comment_id)\
-                    .order_by(CommentVersion.sun_created_at.desc()).limit(1).as_scalar()
+    # @most_recent_version_updated_at.expression
+    # def most_recent_version_updated_at(cls):
+    #     return select([CommentVersion.sun_created_at])\
+    #             .where(CommentVersion.sun_comment_id == cls.sun_comment_id)\
+    #                 .order_by(CommentVersion.sun_created_at.desc()).limit(1).as_scalar()
 
     def to_dict(self):
         main_dict = {
@@ -952,65 +867,25 @@ class Comment(db.Model):
         most_recent_details_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
 
-class CommentVersion(db.Model):
-
-    __tablename__ = 'comment_versions'
-    __table_args__ = (
-        Index('ix_comments_comment_versions', 'sun_comment_id', 'sun_comment_version_id', 'sun_comment_detail_id'),
-        {'schema': 'comments'}
-    )
-
-    sun_comment_id = Column(BigInteger, ForeignKey(Comment.sun_comment_id), primary_key=True, nullable=False)
-    sun_comment_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    sun_comment_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-
-    comment = relationship('Comment', back_populates='versions')
-    detail = relationship('CommentDetail', uselist=False, back_populates='version')
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_comment_id
-
-    @hybrid_property
-    def sun_version_id(self):
-        return self.sun_comment_version_id
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_comment_detail_id
-
-
-    # TODO:
-    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
-    # So that the detail has the version id
-    # This will make it easier to move variables like removed, edited, deleted to the main table
-    # As a workaround, the below works
-
-
-    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
-    # This essentially makes the version usable as a detail
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.init_on_load()
-
-    @reconstructor
-    def init_on_load(self):
-        if self.detail:
-            detail_vars = self.detail.to_dict()
-            for var, value in detail_vars.items():
-                if not hasattr(self, var):
-                    setattr(self, var, value)
-
-
 
 class CommentDetail(db.Model):
     __tablename__ = 'comment_details'
     __table_args__ = {'schema': 'comments'}
 
-    sun_comment_detail_id = Column(ForeignKey(CommentVersion.sun_comment_detail_id), primary_key=True, index=True)
+    # main ids
+    sun_comment_detail_id = Column(BigInteger, primary_key=True, index=True)
+    sun_comment_version_id = Column(BigInteger)
+    sun_comment_id = Column(BigInteger, ForeignKey(Comment.sun_comment_id), nullable = False)
+    
+    # id synonyms
+    sun_unique_id = synonym('sun_comment_id')
+    sun_version_id = synonym('sun_version_id')
+    sun_detail_id = synonym('sun_detail_id')
+
+    # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    
+    # data
     controversiality = Column(BigInteger)
     ups = Column(BigInteger)
     downs = Column(BigInteger)
@@ -1060,19 +935,15 @@ class CommentDetail(db.Model):
     # awardings = relationship('CommentAwarding', back_populates='detail')
     # gildings = relationship('CommentGilding', back_populates='detail')
 
-    version = relationship('CommentVersion', back_populates='detail')
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_comment_detail_id
+    comment = relationship('Comment', back_populates='versions')
 
     def to_dict(self):
         return {
             'sun_comment_detail_id': self.sun_comment_detail_id,
-            "sun_comment_version_id" : self.version.sun_comment_version_id,
+            "sun_comment_version_id" : self.sun_comment_version_id,
             "sun_detail_id" : self.sun_comment_detail_id,
-            "sun_version_id" : self.version.sun_comment_version_id,
-            "sun_unique_id" : self.version.comment.sun_comment_id,
+            "sun_version_id" : self.sun_comment_version_id,
+            "sun_unique_id" : self.comment.sun_comment_id,
             'sun_created_at': self.sun_created_at.strftime('%d-%m-%Y %H:%M:%S'),
             'controversiality': str(self.controversiality) or '',
             'ups': self.ups,
