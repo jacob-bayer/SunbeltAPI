@@ -168,7 +168,7 @@ class SubredditDetail(db.Model):
 
     @is_most_recent_version.expression
     def is_most_recent_version(cls):
-        max_id_per_main_obj = db.session.query(func.max(SubredditDetail.sun_detail_id).label('mr_detail_id')).group_by(SubredditDetail.sun_unique_id).subquery()
+        max_id_per_main_obj = db.session.query(func.max(SubredditDetail.sun_detail_id).label('mr_detail_id')).group_by(SubredditDetail.sun_unique_id).scalar_subquery()
         return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
@@ -247,15 +247,15 @@ class Account(db.Model):
     posts = relationship('Post', back_populates='author')
     versions = relationship('AccountDetail', back_populates='account')
 
-    @hybrid_property
-    def most_recent_version_updated_at(self):
-        return self.versions[-1].sun_created_at
+    # @hybrid_property
+    # def most_recent_version_updated_at(self):
+    #     return self.versions[-1].sun_created_at
 
-    @most_recent_version_updated_at.expression
-    def most_recent_version_updated_at(cls):
-        return select([AccountDetail.sun_created_at])\
-                .where(AccountDetail.sun_account_id == cls.sun_account_id)\
-                    .order_by(AccountDetail.sun_created_at.desc()).limit(1).as_scalar()
+    # @most_recent_version_updated_at.expression
+    # def most_recent_version_updated_at(cls):
+    #     return select([AccountDetail.sun_created_at])\
+    #             .where(AccountDetail.sun_account_id == cls.sun_account_id)\
+    #                 .order_by(AccountDetail.sun_created_at.desc()).limit(1).as_scalar()
 
     def __repr__(self):
         return f'SunAccount({self.sun_account_id})'
@@ -269,9 +269,7 @@ class Account(db.Model):
             'reddit_unique_id': self.reddit_unique_id,
             'sun_unique_id': self.sun_unique_id,
             'version_count': len(self.versions),
-            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
             'versions': [v.detail.to_dict() for v in self.versions],
-
         }
         most_recent_detail_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_detail_dict}
@@ -322,7 +320,7 @@ class AccountDetail(db.Model):
 
     @is_most_recent_version.expression
     def is_most_recent_version(cls):
-        max_id_per_main_obj = db.session.query(func.max(AccountDetail.sun_detail_id).label('mr_detail_id')).group_by(AccountDetail.sun_unique_id).subquery()
+        max_id_per_main_obj = db.session.query(func.max(AccountDetail.sun_detail_id).label('mr_detail_id')).group_by(AccountDetail.sun_unique_id).scalar_subquery()
         return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
@@ -491,14 +489,10 @@ class Post(db.Model):
             "edited" : any([version.edited for version in self.versions]),
             "deleted" : any([version.deleted for version in self.versions]),
             "version_count" : len(self.versions),
-            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
         }
         most_recent_details_dict = {k: v for k, v in self.most_recent_detail.to_dict().items()}
         return {**main_dict, **most_recent_details_dict}
     
-
-
-    #This works but the init_on_load function conflicts with author for some reason
     
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -628,7 +622,7 @@ class PostDetail(db.Model):
 
     @is_most_recent_version.expression
     def is_most_recent_version(cls):
-        max_id_per_main_obj = db.session.query(func.max(PostDetail.sun_detail_id).label('mr_detail_id')).group_by(PostDetail.sun_unique_id).subquery()
+        max_id_per_main_obj = db.session.query(func.max(PostDetail.sun_detail_id).label('mr_detail_id')).group_by(PostDetail.sun_unique_id).scalar_subquery()
         return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
@@ -868,7 +862,6 @@ class Comment(db.Model):
             "deleted" : any([version.deleted for version in self.versions]),
             "versions" : [version.detail.to_dict() for version in self.versions],
             "version_count" : len(self.versions),
-            'most_recent_version_updated_at': self.most_recent_version_updated_at.strftime('%d-%m-%Y %H:%M:%S'),
             "post" : self.post.to_dict() if self.post else None,
             "subreddit" : self.subreddit.to_dict() if self.subreddit else None,
         }
@@ -887,8 +880,8 @@ class CommentDetail(db.Model):
     
     # id synonyms
     sun_unique_id = synonym('sun_comment_id')
-    sun_version_id = synonym('sun_version_id')
-    sun_detail_id = synonym('sun_detail_id')
+    sun_version_id = synonym('sun_comment_version_id')
+    sun_detail_id = synonym('sun_comment_detail_id')
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
@@ -951,7 +944,7 @@ class CommentDetail(db.Model):
 
     @is_most_recent_version.expression
     def is_most_recent_version(cls):
-        max_id_per_main_obj = db.session.query(func.max(CommentDetail.sun_detail_id).label('mr_detail_id')).group_by(CommentDetail.sun_unique_id).subquery()
+        max_id_per_main_obj = db.session.query(func.max(CommentDetail.sun_detail_id).label('mr_detail_id')).group_by(CommentDetail.sun_unique_id).scalar_subquery()
         return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):

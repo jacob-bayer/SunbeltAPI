@@ -125,7 +125,8 @@ def resolve_get_all(obj, info, **kwargs):
 
     # only look at most recent version of posts
     # potentially later on it may be necessary to filter for all post versions
-    results = Model.query.filter(Detail.is_most_recent_version)
+
+    results = Model.query.join(Detail).filter(Detail.is_most_recent_version)
 
     if reddit_ids:
         results = results.filter(Model.reddit_post_id.in_(reddit_ids))

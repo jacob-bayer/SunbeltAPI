@@ -57,36 +57,29 @@ def create_objects(kind, dict_of_dicts):
     # Returns bool indicating whether a new version of the object should be created
     
     models = lookup_dict[kind]
-    model = models["main"]
-    detail = models["detail"]
+    Model = models["Main"]
+    Detail = models["Detail"]
     
     def set_obj_ids(dict_of_dicts):
 
         reddit_ids = list(dict_of_dicts.keys())
 
         checkpoints['started_set_obj_dicts'] = datetime_now_if_true(write_statistics)
-        last_ids = db.session.query(db.func.max(detail.sun_unique_id).label('sun_unique_id'),
-                                    db.func.max(detail.sun_detail_id).label('sun_detail_id'),
-                                    )
-        last_ids = last_ids.one()
+        last_ids = db.session.query(db.func.max(Detail.sun_unique_id).label('sun_unique_id'),
+                                    db.func.max(Detail.sun_detail_id).label('sun_detail_id'),
+                                    ).one()
 
-        last_ids = {'sun_unique_id' : last_ids.sun_unique_id, 
-                    'sun_detail_id' : last_ids.sun_detail_id}
+        last_ids = {'sun_unique_id' : last_ids.sun_unique_id or 0, 
+                    'sun_detail_id' : last_ids.sun_detail_id or 0}
 
         checkpoints['last_ids_complete'] = datetime_now_if_true(write_statistics)
-        subquery = db.session.query(
-                            detail.sun_unique_id.label('sun_unique_id'), 
-                            db.func.max(detail.sun_version_id).label('max_version_id'))\
-                            .group_by(detail.sun_unique_id).subquery()
 
-        mr_query = model.query.join(detail)\
-                        .join(subquery, db.and_(detail.sun_unique_id == subquery.c.sun_unique_id, 
-                                                detail.sun_version_id == subquery.c.max_version_id))\
-                        .filter(model.reddit_unique_id.in_(reddit_ids))\
-                        .with_entities(model.reddit_unique_id.label('reddit_unique_id'), 
-                                    model.sun_unique_id.label('sun_unique_id'), 
-                                    detail.sun_version_id.label('most_recent_version_id'),
-                                    detail.sun_created_at.label('most_recent_version_updated_at'))
+        mr_query = Model.query.join(Detail).filter(Detail.is_most_recent_version)\
+                        .filter(Model.reddit_unique_id.in_(reddit_ids))\
+                        .with_entities(Model.reddit_unique_id.label('reddit_unique_id'), 
+                                    Model.sun_unique_id.label('sun_unique_id'), 
+                                    Detail.sun_version_id.label('most_recent_version_id'),
+                                    Detail.sun_created_at.label('most_recent_version_updated_at'))
 
         checkpoints['mr_query_complete'] = datetime_now_if_true(write_statistics)
         mr_dict = {}
@@ -146,8 +139,8 @@ def create_objects(kind, dict_of_dicts):
     for item in dict_of_dicts.values():
         v1 = item[f'sun_{kind}_version_id'] == 1
         if v1:
-            sqla_objs_to_write += [generate_sqla_obj(item, models['main'], model_columns['main'])]
-        sqla_objs_to_write += [generate_sqla_obj(item, models['detail'], model_columns['detail'])]
+            sqla_objs_to_write += [generate_sqla_obj(item, models['Main'], model_columns['Main'])]
+        sqla_objs_to_write += [generate_sqla_obj(item, models['Detail'], model_columns['Detail'])]
 
     # for sqla_obj in sqla_objs_to_write:
     #     try:
