@@ -162,6 +162,15 @@ class SubredditDetail(db.Model):
 
     subreddit = relationship('Subreddit', back_populates='versions')
 
+    @hybrid_property
+    def is_most_recent_version(self):
+        return self.sun_detail_id == self.subreddit.most_recent_version.sun_detail_id
+
+    @is_most_recent_version.expression
+    def is_most_recent_version(cls):
+        max_id_per_main_obj = db.session.query(func.max(SubredditDetail.sun_detail_id).label('mr_detail_id')).group_by(SubredditDetail.sun_unique_id).subquery()
+        return cls.sun_detail_id.in_(max_id_per_main_obj)
+
     def to_dict(self):
         return {
             'sun_subreddit_detail_id': self.sun_subreddit_detail_id,
@@ -306,6 +315,15 @@ class AccountDetail(db.Model):
     #has_verified_email = Column(Boolean)
 
     account = relationship('Account', back_populates='versions')
+
+    @hybrid_property
+    def is_most_recent_version(self):
+        return self.sun_detail_id == self.account.most_recent_version.sun_detail_id
+
+    @is_most_recent_version.expression
+    def is_most_recent_version(cls):
+        max_id_per_main_obj = db.session.query(func.max(AccountDetail.sun_detail_id).label('mr_detail_id')).group_by(AccountDetail.sun_unique_id).subquery()
+        return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
         return {
@@ -610,8 +628,8 @@ class PostDetail(db.Model):
 
     @is_most_recent_version.expression
     def is_most_recent_version(cls):
-        max_id_per_post = db.session.query(func.max(PostDetail.sun_post_detail_id).label('mr_detail_id')).group_by(PostDetail.sun_post_id).subquery()
-        return cls.sun_detail_id.in_(max_id_per_post)
+        max_id_per_main_obj = db.session.query(func.max(PostDetail.sun_detail_id).label('mr_detail_id')).group_by(PostDetail.sun_unique_id).subquery()
+        return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
         return {
@@ -823,16 +841,6 @@ class Comment(db.Model):
         else:
             return None
 
-    # @hybrid_property
-    # def most_recent_version_updated_at(self):
-    #     return self.versions[-1].sun_created_at
-
-    # @most_recent_version_updated_at.expression
-    # def most_recent_version_updated_at(cls):
-    #     return select([CommentVersion.sun_created_at])\
-    #             .where(CommentVersion.sun_comment_id == cls.sun_comment_id)\
-    #                 .order_by(CommentVersion.sun_created_at.desc()).limit(1).as_scalar()
-
     def to_dict(self):
         main_dict = {
             'sun_comment_id': self.sun_comment_id,
@@ -936,6 +944,15 @@ class CommentDetail(db.Model):
     # gildings = relationship('CommentGilding', back_populates='detail')
 
     comment = relationship('Comment', back_populates='versions')
+
+    @hybrid_property
+    def is_most_recent_version(self):
+        return self.sun_detail_id == self.comment.most_recent_version.sun_detail_id
+
+    @is_most_recent_version.expression
+    def is_most_recent_version(cls):
+        max_id_per_main_obj = db.session.query(func.max(CommentDetail.sun_detail_id).label('mr_detail_id')).group_by(CommentDetail.sun_unique_id).subquery()
+        return cls.sun_detail_id.in_(max_id_per_main_obj)
 
     def to_dict(self):
         return {
