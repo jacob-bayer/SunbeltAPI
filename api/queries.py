@@ -2,9 +2,18 @@
 
 
 from .models import *
+from .model_lookup import lookup_dict
 from ariadne import convert_kwargs_to_snake_case
 from datetime import datetime
 from sqlalchemy import func, text
+
+def convert_date(date):
+    try:
+        return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
+    except ValueError:
+        return datetime.strptime(date, '%d-%m-%Y')
+    except:
+        raise ValueError("Invalid date format, should be 'dd-mm-yyyy' or 'dd-mm-yyyy hh:mm:ss'")
 
 
 ######### POSTS ###########
@@ -13,15 +22,9 @@ from sqlalchemy import func, text
 def resolve_posts(obj, info, **kwargs):
     post_selections = [x for x in info.field_nodes[0].selection_set.selections if x.name.value == 'posts'][0]
     fields = [x.name.value for x in post_selections.selection_set.selections]
+    subfields = {x.name.value : [y.name.value for y in x.selection_set.selections] for x in post_selections.selection_set.selections if x.selection_set}
 
-    def convert_date(date):
-        try:
-            return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
-        except ValueError:
-            return datetime.strptime(date, '%d-%m-%Y')
-        except:
-            raise ValueError("Invalid date format, should be 'dd-mm-yyyy' or 'dd-mm-yyyy hh:mm:ss'")
-    
+
     posted_before = kwargs.get('posted_before')
     posted_after = kwargs.get('posted_after')
     updated_before = kwargs.get('updated_before')
@@ -97,23 +100,48 @@ def resolve_posts(obj, info, **kwargs):
     if limit:
         posts = posts.limit(limit)
 
-    fields = ['reddit_post_id',
+    fields = ['reddit_unique_id',
                 'reddit_account_id',
                 'ups',
                 'selftext',
-                'posts.posts.sun_post_id']
+                'sun_unique_id',
+                'subreddit',]
 
-    posts = posts.with_entities(*[db.text(field) for field in fields]).all()    
+    subfields = {'subreddit': ['display_name', 'sun_subreddit_id']}
+
+    # separate fields into three lists, one for each table (Post, PostVersion, PostDetail)
+    fields_dict = {
+    Post : [field for field in fields if hasattr(Post, field)],
+    PostVersion : [field for field in fields if hasattr(PostVersion, field)],
+    PostDetail : [field for field in fields if hasattr(PostDetail, field)]
+    }
+
+
+    all_sqlalchemy_fields = []
+    fields_seen = []
+    for table, table_fields in fields_dict.items():
+        for field in table_fields:
+            if field not in fields_seen:
+                fields_seen.append(field)
+                all_sqlalchemy_fields += [getattr(table, field)]
+
+    #posts = posts.with_entities(*all_sqlalchemy_fields)
+    
+    posts = posts.with_entities(*[getattr(Post, field) for field in fields])
+
+    posts = posts.all()
 
     # convert list of sqlalchemy tuples to list of dicts
+    posts_dict_list = []
+    for post in posts:
+        posts_dict_list += [{col : post[col] for col in post.keys()}]
 
     try:
-        posts = [dict(zip(fields, post)) for post in posts]
         #posts = [post.to_dict() for post in posts]
         payload = {
             "success": True,
             "total_count": total_count,
-            "posts": posts
+            "posts": posts_dict_list
         }
     except Exception as error:
         payload = {

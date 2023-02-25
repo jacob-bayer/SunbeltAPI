@@ -2,10 +2,9 @@
 
 from . import db
 from sqlalchemy.orm import relationship, reconstructor, aliased
-from sqlalchemy import ( BigInteger, Boolean, Column, DateTime, Float, ForeignKey, 
-                        Identity, Index, Integer, Text, text, Numeric, Computed )
+from sqlalchemy import ( BigInteger, Boolean, Column, DateTime, Float, 
+                        ForeignKey, Index, Integer, Text, text, Numeric, select, desc)
 
-from sqlalchemy import select
 
 # used for sorting by properties
 # https://docs.sqlalchemy.org/en/13/orm/extensions/hybrid.html
@@ -90,7 +89,6 @@ class SubredditVersion(db.Model):
         {'schema': 'subreddits'}
     )
 
-    # generate a foriegn key to the subreddit table
     sun_subreddit_id = Column(ForeignKey(Subreddit.sun_subreddit_id), primary_key=True, index=True)
     sun_subreddit_version_id = Column(BigInteger, primary_key=True, nullable=False)
     sun_subreddit_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
@@ -460,66 +458,91 @@ class Post(db.Model):
     created_utc = Column(Float(53))
     is_video = Column(Boolean)
 
-    subreddit = relationship('Subreddit', back_populates='posts')
-    author = relationship('Account', back_populates='posts')
-    versions = relationship('PostVersion', back_populates='post')
+    subreddit = relationship(Subreddit, back_populates='posts')
+    author = relationship(Account, back_populates='posts')
+    versions = relationship('PostVersion', back_populates='post') #, order_by='PostVersion.sun_created_at')
 
-    @hybrid_property
-    def reddit_unique_id(self):
-        return self.reddit_post_id
+    #most_recent_version = relationship(PostVersion, backref=backref('all_info', order_by='ThingInfo.recorded_at')
 
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_post_id
-
-    @hybrid_property
-    def most_recent_version(self):
-        return self.versions[-1]
-
-    @most_recent_version.expression
-    def most_recent_version(cls):
-        version_alias = aliased(PostVersion)
-        subquery = (db.session.query(version_alias)
-                    .filter(version_alias.sun_post_id == cls.sun_post_id)
-                    .order_by(version_alias.sun_post_version_id.desc())
-                    .limit(1)
-                    .subquery())
-
-        def _get_field(field):
-        # Return the column for the given field in PostDetail model
-            breakpoint()
-            return getattr(subquery.c, field)
-
-        return _get_field
-
-    @hybrid_property
-    def most_recent_detail(self):
-        return self.versions[-1].detail
-
-    @most_recent_detail.expression
-    def most_recent_detail(cls):
-        most_recent_detail_id = select([PostVersion.sun_post_detail_id])\
-                .where(PostVersion.sun_post_id == cls.sun_post_id)\
-                    .order_by(PostVersion.sun_post_version_id.desc()\
-                        ).limit(1).subquery()
-        
-        all_postdetail_columns = [x for x in PostDetail.__table__.columns]
-        #breakpoint()
-        return select(all_postdetail_columns)\
-                .select_from(PostDetail.__table__.join(most_recent_detail_id,
-                             PostDetail.sun_post_detail_id == most_recent_detail_id.c.sun_post_detail_id))
+    # https://stackoverflow.com/questions/19780178/sqlalchemy-hybrid-expression-with-relationship
+    # https://stackoverflow.com/questions/40614651/correlating-a-sqlalchemy-relationship-with-an-awkward-join
+    # most_recent_version_rel = relationship(A,
+    #     secondary=latest_a,
+    #     primaryjoin=latest_a.c.a_remote == foreign_to_a,
+    #     secondaryjoin=latest_a.c.a_id == A.a_id,
+    #     uselist=False, viewonly=True)
 
 
+    # @hybrid_property
+    # def reddit_unique_id(self):
+    #     return self.reddit_post_id
 
-    @hybrid_property
-    def most_recent_version_updated_at(self):
-        return self.versions[-1].sun_created_at
+    # @hybrid_property
+    # def sun_unique_id(self):
+    #     return self.sun_post_id
 
-    @most_recent_version_updated_at.expression
-    def most_recent_version_updated_at(cls):
-        return select([PostVersion.sun_created_at])\
-                .where(PostVersion.sun_post_id == cls.sun_post_id)\
-                    .order_by(PostVersion.sun_created_at.desc()).limit(1).as_scalar()
+    # @hybrid_property
+    # def most_recent_version(self):
+    #     return self.versions[-1]
+
+    # @most_recent_version.expression
+    # def most_recent_version(cls):
+    #     # returns the version with the attribute is_most_recent_version set to True
+    #     return (
+    #         select(PostVersion)
+    #         .where(PostVersion.sun_post_id == cls.sun_post_id)
+    #         .order_by(desc(PostVersion.sun_post_version_id))
+    #         .limit(1)
+    #         .as_scalar()
+    #     )
+
+
+    # @hybrid_property
+    # def most_recent_detail(self):
+    #     return self.versions[-1].detail
+
+    # @most_recent_version.expression
+    # def most_recent_version(cls):
+    #     return (
+    #         select(PostVersion)
+    #         .where(PostVersion.sun_post_id == cls.sun_post_id)
+    #         .order_by(desc(PostVersion.sun_post_version_id))
+    #         .limit(1)
+    #         .as_scalar()
+    #     )
+    
+    # @most_recent_detail.expression
+    # def most_recent_detail(cls):
+    #     version = cls.most_recent_version
+    #     return (
+    #         select(PostDetail)
+    #         .where(PostDetail.sun_post_detail_id == version.sun_post_detail_id)
+    #         .limit(1)
+    #         .as_scalar()
+    #     )
+
+    # @most_recent_detail.expression
+    # def most_recent_detail(cls):
+    #     most_recent_detail_id = select([PostVersion.sun_post_detail_id])\
+    #             .where(PostVersion.sun_post_id == cls.sun_post_id)\
+    #                 .order_by(PostVersion.sun_post_version_id.desc()\
+    #                     ).limit(1).subquery()
+
+    #     all_postdetail_columns = [x for x in PostDetail.__table__.columns]
+
+    #     return select(all_postdetail_columns)\
+    #             .select_from(PostDetail.__table__.join(most_recent_detail_id,
+    #                          PostDetail.sun_post_detail_id == most_recent_detail_id.c.sun_post_detail_id))
+
+    # @hybrid_property
+    # def most_recent_version_updated_at(self):
+    #     return self.versions[-1].sun_created_at
+
+    # @most_recent_version_updated_at.expression
+    # def most_recent_version_updated_at(cls):
+    #     return select([PostVersion.sun_created_at])\
+    #             .where(PostVersion.sun_post_id == cls.sun_post_id)\
+    #                 .order_by(PostVersion.sun_created_at.desc()).limit(1).as_scalar()
 
     def __repr__(self):
         return f"SunPost({self.sun_post_id})"
@@ -557,7 +580,7 @@ class Post(db.Model):
     
 
 
-    # This works but the init_on_load function conflicts with author for some reason
+    #This works but the init_on_load function conflicts with author for some reason
     
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -570,65 +593,16 @@ class Post(db.Model):
     #     for var, value in mr_vars.items():
     #         setattr(self, var, value)
 
-        
-    
-class PostVersion(db.Model):
-    __tablename__ = 'post_versions'
-    __table_args__ = (
-        Index('ix_posts_post_versions', 'sun_post_id', 'sun_post_version_id', 'sun_post_detail_id'),
-        {'schema': 'posts'}
-    )
-
-    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), primary_key=True, nullable=False)
-    sun_post_version_id = Column(BigInteger, primary_key=True, nullable=False)
-    sun_post_detail_id = Column(BigInteger, primary_key=True, nullable=False, unique=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-
-    post = relationship('Post', back_populates='versions')
-    detail = relationship('PostDetail', uselist=False, back_populates='version')
-
-    @hybrid_property
-    def sun_unique_id(self):
-        return self.sun_post_id
-
-    @hybrid_property
-    def sun_version_id(self):
-        return self.sun_post_version_id
-
-    @hybrid_property
-    def sun_detail_id(self):
-        return self.sun_post_detail_id
 
 
-    # TODO:
-    # I HAVE DECIDED THAT VERSION AND DETAIL TABLES SHOULD BE MERGED
-    # So that the detail has the version id
-    # This will make it easier to move variables like removed, edited, deleted to the main table
-    # As a workaround, the below works
-
-
-    # This works here but the init_on_load function conflicts with author on main table posts/comments for some reason
-    # This essentially makes the version usable as a detail
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.init_on_load()
-
-    @reconstructor
-    def init_on_load(self):
-        if self.detail:
-            detail_vars = self.detail.to_dict()
-            for var, value in detail_vars.items():
-                if not hasattr(self, var):
-                    setattr(self, var, value)
-
-
-class PostDetail(db.Model):
+class PostVersion(Post):
     __tablename__ = 'post_details'
     __table_args__ = {'schema': 'posts'}
 
-    sun_post_detail_id = Column(BigInteger, ForeignKey(PostVersion.sun_post_detail_id), primary_key=True, index=True)
-    sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    sun_post_detail_id = Column(BigInteger,  primary_key=True, index=True)
+    sun_post_version_id = Column(BigInteger, nullable=False)
+    sun_post_id = Column(BigInteger, ForeignKey(Post.sun_post_id), nullable=False)
+    version_updated_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
     gilded = Column(BigInteger)
     selftext = Column(Text)
     downs = Column(BigInteger)
@@ -716,7 +690,7 @@ class PostDetail(db.Model):
     # media_embeds = relationship('PostMediaEmbed', back_populates='detail')
     # secure_media = relationship('PostSecureMedia', back_populates='detail')
 
-    version = relationship('PostVersion', back_populates='detail')
+    post = relationship('Post', back_populates='versions')
 
     @hybrid_property
     def sun_detail_id(self):
