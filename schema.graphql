@@ -179,7 +179,7 @@ type Comment {
     locked: Boolean
     report_reasons: String
     author_flair_text: String
-    most_recent_version_updated_at: String
+    version_updated_at: String
     upvote_ratio : Float
 }
 
@@ -230,7 +230,7 @@ type Account {
     hide_from_robots: Boolean
     deleted: Boolean
     is_suspended: Boolean
-    most_recent_version_updated_at: String
+    version_updated_at: String
 }
 
 type AccountDetail {
