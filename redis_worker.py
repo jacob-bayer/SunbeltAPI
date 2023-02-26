@@ -11,8 +11,8 @@ logging.basicConfig(level=logging.INFO)
 
 listen = ['SunbeltInsertQueue']
 
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL'] #'sqlite:///app.db'
 redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
-
 conn = redis.from_url(redis_url)
 
 if __name__ == '__main__':
@@ -21,6 +21,10 @@ if __name__ == '__main__':
     parser.add_argument('--prod', help='Use prod database', action='store_const', 
                                     const=True, default=False)
     args = parser.parse_args()
+
+    # figure out how to make the prod stuff work 
+    #also see: https://flask-migrate.readthedocs.io/en/latest/#multiple-database-support
+
 
     with app.app_context():
         with Connection(conn):

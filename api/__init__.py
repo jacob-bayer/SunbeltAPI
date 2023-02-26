@@ -24,8 +24,7 @@ app = Flask(__name__)
 if app.debug:
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL'] #'sqlite:///app.db'
 else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL']
-    #app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
 
 
 app.config["JWT_SECRET_KEY"] = os.environ['JWT_SECRET_KEY']
