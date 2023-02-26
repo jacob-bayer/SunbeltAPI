@@ -1,10 +1,13 @@
 import os
 from api import app
 import redis
+import logging
 from rq import Worker, Queue, Connection
 import argparse
 from dotenv import load_dotenv
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
 
 listen = ['SunbeltInsertQueue']
 

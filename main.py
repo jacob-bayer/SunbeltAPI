@@ -55,12 +55,6 @@ def graphql_server():
     status_code = 200 if success else 400
     return jsonify(result), status_code
 
-def convert_date(date):
-    try:
-        return datetime.strptime(date, '%d-%m-%Y %H:%M:%S')
-    except ValueError:
-        return datetime.strptime(date, '%d-%m-%Y')
-
 
 redis_q = Queue('SunbeltInsertQueue', connection=conn)
 

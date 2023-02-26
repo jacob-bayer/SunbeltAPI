@@ -28,6 +28,7 @@ class Subreddit(db.Model):
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
 
     # data
     url = Column(Text, nullable=False)
@@ -84,7 +85,10 @@ class SubredditDetail(db.Model):
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER::INTEGER"))
+    version_updated_at = synonym('sun_created_at')
+    version_updated_at_epoch = synonym('sun_created_at_epoch')
+
     # data
     active_user_count = Column(BigInteger)
     accounts_active = Column(BigInteger)
@@ -237,7 +241,8 @@ class Account(db.Model):
 
     # Row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
+       
     # data
     name = Column(Text, nullable=False)
     created = Column(Float(53))
@@ -291,6 +296,9 @@ class AccountDetail(db.Model):
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
+    version_updated_at = synonym('sun_created_at')
+    version_updated_at_epoch = synonym('sun_created_at_epoch')
 
     # data
     comment_karma = Column(BigInteger)
@@ -358,7 +366,7 @@ class Post(db.Model):
 
     # reddit ids
     reddit_post_id = Column(Text, nullable=False, index = True)
-    reddit_subreddit_id = Column(Text, nullable=False)
+    reddit_subreddit_id = Column(Text, nullable=False, index = True)
     reddit_account_id = Column(Text)
 
     # id synonyms
@@ -366,7 +374,9 @@ class Post(db.Model):
     reddit_unique_id = synonym('reddit_post_id')
     
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
+
+
     # data
     title = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
@@ -523,7 +533,9 @@ class PostDetail(db.Model):
 
     # Row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
     version_updated_at = synonym('sun_created_at')
+    version_updated_at_epoch = synonym('sun_created_at_epoch')
     
     # data
     gilded = Column(BigInteger)
@@ -808,7 +820,8 @@ class Comment(db.Model):
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
+
     # data
     created_utc = Column(Numeric)
     depth = Column(BigInteger)
@@ -885,7 +898,10 @@ class CommentDetail(db.Model):
 
     # row added timestamp
     sun_created_at = Column(DateTime, nullable=False, server_default=text("timezone('utc', now())"))
-    
+    sun_created_at_epoch = Column(BigInteger, nullable=False, server_default=text("extract(epoch from timezone('utc', now()))::INTEGER"))
+    version_updated_at = synonym('sun_created_at')
+    version_updated_at_epoch = synonym('sun_created_at_epoch')
+
     # data
     controversiality = Column(BigInteger)
     ups = Column(BigInteger)

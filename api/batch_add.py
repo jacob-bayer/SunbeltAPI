@@ -2,10 +2,12 @@ from .model_lookup import lookup_dict
 from .models import *
 import json
 from sqlalchemy.exc import IntegrityError
-
+import logging
 from datetime import datetime, timedelta
 import secrets
 import os
+
+log = logging.getLogger('BATCH_ADD')
 
 def datetime_now_if_true(some_bool):
     return datetime.now() if some_bool else None
@@ -194,12 +196,13 @@ def batch_create_from_json(from_json):
     kinds = ['post', 'comment', 'account', 'subreddit']
     for kind in kinds:
         data = {x[f'reddit_{kind}_id']: x for x in from_dict if x['kind'] == kind}
-        print(f'Creating {len(data)} {kind}s')
-        
-        result = create_objects(kind, data)
-        if result['success']:
-            objs_created += result['objs_created']
-        elif result['error']:
-            return {'success': False, 'error': result['error']}
+        if data:
+            log.info(f'Creating {len(data)} {kind}s')
+            
+            result = create_objects(kind, data)
+            if result['success']:
+                objs_created += result['objs_created']
+            elif result['error']:
+                return {'success': False, 'error': result['error']}
 
     return {'success': True, 'objs_created': objs_created}

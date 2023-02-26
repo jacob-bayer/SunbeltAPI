@@ -388,6 +388,7 @@ type Query {
           orderBy: OrderByInput,
           sun_subreddit_id: Int,
           sun_account_id: Int,
+          reddit_subreddit_id: String,
           limit: Int,
           offset: Int): PostsResult!
 
@@ -403,6 +404,7 @@ type Query {
           sun_post_id: Int,
           sun_subreddit_id: Int,
             sun_account_id: Int,
+          reddit_subreddit_id: String,
           limit: Int,
           offset: Int): CommentsResult!
 
