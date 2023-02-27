@@ -7,11 +7,13 @@ import argparse
 from dotenv import load_dotenv
 load_dotenv()
 
+log = logging.getLogger('REDIS WORKER')
 logging.basicConfig(level=logging.INFO)
 
 listen = ['SunbeltInsertQueue']
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL'] #'sqlite:///app.db'
+#app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv('LOCAL_SUNBELT_DB_URL') #'sqlite:///app.db'
+log.warning('Using prod database')
 redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 conn = redis.from_url(redis_url)
 
