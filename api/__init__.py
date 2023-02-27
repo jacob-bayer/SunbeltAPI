@@ -22,7 +22,7 @@ app = Flask(__name__)
 # Debug = True means development mode.
 
 if app.debug:
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['LOCAL_SUNBELT_DB_URL'] #'sqlite:///app.db'
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv('LOCAL_SUNBELT_DB_URL') #'sqlite:///app.db'
 else:
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['HEROKU_SUNBELT_DB_URL']
 
