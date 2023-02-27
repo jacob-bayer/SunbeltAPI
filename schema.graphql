@@ -31,7 +31,7 @@ type Subreddit {
     accounts_active: Int
     public_traffic: Boolean
     subscribers: Int
-    most_recent_version_updated_at: String
+    version_updated_at: String
     most_recent_sun_version_id: Int
     most_recent_sun_detail_id: Int
 
@@ -82,7 +82,7 @@ type Post {
     upvote_ratio : Float
     created_utc : Float
     num_comments : Int
-    most_recent_version_updated_at : String
+    version_updated_at : String
 
 }
 
@@ -179,7 +179,7 @@ type Comment {
     locked: Boolean
     report_reasons: String
     author_flair_text: String
-    most_recent_version_updated_at: String
+    version_updated_at: String
     upvote_ratio : Float
 }
 
@@ -230,7 +230,7 @@ type Account {
     hide_from_robots: Boolean
     deleted: Boolean
     is_suspended: Boolean
-    most_recent_version_updated_at: String
+    version_updated_at: String
 }
 
 type AccountDetail {
@@ -388,6 +388,7 @@ type Query {
           orderBy: OrderByInput,
           sun_subreddit_id: Int,
           sun_account_id: Int,
+          reddit_subreddit_id: String,
           limit: Int,
           offset: Int): PostsResult!
 
@@ -403,6 +404,7 @@ type Query {
           sun_post_id: Int,
           sun_subreddit_id: Int,
             sun_account_id: Int,
+          reddit_subreddit_id: String,
           limit: Int,
           offset: Int): CommentsResult!
 
