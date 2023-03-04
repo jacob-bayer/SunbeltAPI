@@ -51,7 +51,6 @@ def select_fields(info, results):
     if fields:
 
         kind = info.field_name if not info.field_name.endswith('s') else info.field_name[:-1]
-
         if subfields:
             raise Exception('Subfields not supported.')
             for aliased_kind, fields in subfields.items(): 
@@ -87,6 +86,7 @@ def payload(results, info, additional_data = None, errors = None):
 
     result = select_fields(info, results)
     return_dict = {"success": True}
+
     if additional_data:
         return_dict.update(additional_data)
 
@@ -118,7 +118,7 @@ def resolve_get(obj, info, **kwargs):
         if not result.count():
             errors += [f"No {kind}s found with reddit_id {reddit_id}"]
 
-    return payload(result, info, errors)
+    return payload(result, info, errors = errors)
 
 @convert_kwargs_to_snake_case
 def resolve_get_all(obj, info, **kwargs):
@@ -200,7 +200,7 @@ def resolve_get_all(obj, info, **kwargs):
 
     if limit:
         results = results.limit(limit)
-    
+
     return payload(results, info, additional_data = additional_data)
 
 
